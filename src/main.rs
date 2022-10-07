@@ -17,6 +17,8 @@ fn main() {
        InputPath_str:String::from(&test_path),
         UnzipFile:vec![image::DynamicImage::new_rgb32f(5, 5)]};
     
+    let MemoryFiles = &izip.Unzip_toMemory();
+
     &izip.Unzip2();
     println!("{:?}",&izip.Debug_str());
     &izip.Debug();

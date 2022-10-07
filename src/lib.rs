@@ -1,9 +1,13 @@
+use std::borrow::BorrowMut;
+use std::fmt::Error;
 use std::path::Path;
 
 use std::fs::File;
 use std::io::{Read, BufReader, Seek, SeekFrom, Result, Stdout};
 use std::fs;
 use std::io;
+use image::imageops::FilterType;
+use image::{ImageFormat, buffer, DynamicImage, ImageResult, ImageError};
 
 use zip::read::ZipFile;
 
@@ -15,16 +19,25 @@ pub  struct  Input_ZipFile {
     
 }
 
+pub struct Input_MemoryFiles{
+
+    pub InputMemoryFiles:Vec<DynamicImage>,
+    pub OutputPath_str:String,
+    pub debug_str:String,
+    pub ConvImages:Option<Vec<image::DynamicImage>>
+    
+}
+
 
 
 impl  Input_ZipFile {
-   pub fn Unzip_toMemory(&mut self)->Option<Vec<Stdout>>{
+   pub fn Unzip_toMemory(&mut self)->Option<Vec<DynamicImage>>{
 
     let fname = std::path::Path::new(&self.InputPath_str);
          let file = fs::File::open(&fname).unwrap();
      
          let mut archive = zip::ZipArchive::new(file).unwrap();
-        let mut MemoryFiles:Vec<Stdout> = Vec::new();
+        let mut MemoryFiles:Vec<DynamicImage> = Vec::new();
          for i in 0..archive.len() {
              let mut file = archive.by_index(i).unwrap();
              let outpath = match file.enclosed_name() {
@@ -54,10 +67,14 @@ impl  Input_ZipFile {
                          fs::create_dir_all(&p).unwrap();
                      }
                  }
-                 let mut s_out:Stdout = io::stdout();
-                 io::copy(&mut file, &mut s_out).unwrap();
-                MemoryFiles.push(s_out);
-                 let mut outfile = fs::File::create(&outpath).unwrap();
+                
+                 let mut bf_out:Vec<u8> = Vec::new();
+                 file.read_to_end(&mut bf_out);
+             
+                 let mut im = image::load_from_memory(Some(bf_out).as_deref().unwrap());
+                
+                MemoryFiles.push(im.unwrap());
+                // let mut outfile = fs::File::create(&outpath).unwrap();
                  
              }
      
@@ -71,7 +88,8 @@ impl  Input_ZipFile {
                  }
              }
          }
-       None
+        if MemoryFiles.len() > 1 { return Some(MemoryFiles);}
+        return None
     }
 
 
@@ -140,9 +158,20 @@ impl  Input_ZipFile {
      }
 
 
-   
-
-
-
-
 } 
+
+impl Input_MemoryFiles {
+   
+    pub fn Convert_Size(&mut self) {
+        for im in &self.InputMemoryFiles{
+
+            
+        }
+    }
+
+    pub fn ZipArchive(&mut self){
+      
+
+    }
+
+}
