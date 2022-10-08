@@ -1,8 +1,11 @@
 
 use ResizeImgZiper::Input_ZipFile;
+use ResizeImgZiper::Input_MemoryFiles;
+use image::DynamicImage;
 fn main() {
     println!("Hello, world!");
     let test_path = String::from("C:\\temp\\test.zip");
+    let test_outpath = String::from("C:\\temp\\");
     /* 
     let args: Vec<_> = std::env::args().collect();
     if args.len() < 2 {
@@ -17,12 +20,28 @@ fn main() {
        InputPath_str:String::from(&test_path),
         UnzipFile:vec![image::DynamicImage::new_rgb32f(5, 5)]};
     
-    let MemoryFiles = &izip.Unzip_toMemory();
+    let  MemoryFiles = izip.Unzip_toMemory();
 
-    &izip.Unzip2();
-    println!("{:?}",&izip.Debug_str());
-    &izip.Debug();
-    println!("{:?}",&izip.Debug_str());
+    match MemoryFiles  {
+        Some(r) =>  {println!("OKmem");
+    WriteMemoryFiles(r, test_outpath)
+    
+    } ,
+        None    => println!("NGmem")
+        
+        
+    }
+
+
+    fn WriteMemoryFiles(v:Vec<DynamicImage>,outpath: String){
+    let mut mfiles = Input_MemoryFiles{
+        InputMemoryFiles:v,
+        OutputPath_str:String::from(outpath), debug_str:String::from("new"),
+        ConvImages:Some(vec![image::DynamicImage::new_rgb32f(5, 5)])
+
+    };}
+  
+
 
    // println!("{}",izip.Unzip());
    // println!("{}",&izip.debug_str());

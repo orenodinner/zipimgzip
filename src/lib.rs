@@ -163,8 +163,13 @@ impl  Input_ZipFile {
 impl Input_MemoryFiles {
    
     pub fn Convert_Size(&mut self) {
+        let outPath = std::path::Path::new(&self.OutputPath_str);
         for im in &self.InputMemoryFiles{
-
+          match  im.save(outPath) {
+            Ok(v) => println!("ok_save"),
+            Err(e)=> println!("Err")
+              
+          } 
             
         }
     }
