@@ -3,13 +3,24 @@ use std::fmt::Error;
 use std::path::Path;
 
 use std::fs::File;
-use std::io::{Read, BufReader, Seek, SeekFrom, Result, Stdout};
+use std::io::{Read, BufReader, Seek,Write, SeekFrom, Result, Stdout};
 use std::fs;
 use std::io;
 use image::imageops::FilterType;
 use image::{ImageFormat, buffer, DynamicImage, ImageResult, ImageError};
 
+use zip::ZipWriter;
 use zip::read::ZipFile;
+
+use std::io::prelude::*;
+use std::io::Cursor;
+
+use std::iter::Iterator;
+use zip::result::ZipError;
+use zip::write::FileOptions;
+use walkdir::{DirEntry, WalkDir};
+
+
 
 pub  struct  Input_ZipFile {
 
@@ -24,7 +35,8 @@ pub struct Input_MemoryFiles{
     pub InputMemoryFiles:Vec<DynamicImage>,
     pub OutputPath_str:String,
     pub debug_str:String,
-    pub ConvImages:Option<Vec<image::DynamicImage>>
+    pub ConvImages:Option<Vec<image::DynamicImage>>,
+    pub Name:String
     
 }
 
@@ -165,9 +177,10 @@ impl Input_MemoryFiles {
     pub fn Convert_Size(&mut self) {
         let outPath = std::path::Path::new(&self.OutputPath_str);
         for im in &self.InputMemoryFiles{
+            
           match  im.save(outPath) {
             Ok(v) => println!("ok_save"),
-            Err(e)=> println!("Err")
+            Err(e)=> println!("Err{}",e)
               
           } 
             
@@ -178,5 +191,42 @@ impl Input_MemoryFiles {
       
 
     }
+    pub fn CreateZipArchive(&mut self,
+        outpath: String
+    ) -> zip::result::ZipResult<()>
+    {
+        let it = &self.InputMemoryFiles;
+        let mut buf = Cursor::new(vec![]);
+        let path_temp = Path::new(&outpath);
+        let file = File::create(&path_temp).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let options = zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+       // let mut buf8 = &mut [];
+        
+        for im in it{
+          match  im.write_to(&mut buf,
+                ImageFormat::Jpeg){
+                    Ok(e) => {
+                        println!("s_buf");
+                        let mut temp_zip = ZipWriter::new(buf.clone());
+                       let temp_cursor= temp_zip.finish().unwrap();
+                            // And get a reference to the original [u8] slice
+    let r_buf = temp_cursor.get_ref();
+    // These are the bytes we want
+    
+                       //buf.write(buf8).unwrap();
+                        //let r_buf = buf.get_ref();
+                        zip.start_file(&outpath,options)?;
+                        zip.write_all(r_buf);
+                        println!("F_buf");
+                },
+                    Err(r) => println!("NG_buf")
+                }
+        }
+        zip.finish()?;
+        println!("FINSH");
+    Ok(())
+    }
+
 
 }
