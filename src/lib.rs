@@ -1,5 +1,7 @@
 use std::borrow::BorrowMut;
+use std::env::temp_dir;
 use std::fmt::Error;
+use std::ops::Add;
 use std::path::Path;
 
 use std::fs::File;
@@ -19,7 +21,8 @@ use std::iter::Iterator;
 use zip::result::ZipError;
 use zip::write::FileOptions;
 use walkdir::{DirEntry, WalkDir};
-
+use tempfile::TempDir;
+use tempfile::tempfile;
 
 
 pub  struct  Input_ZipFile {
@@ -47,7 +50,6 @@ impl  Input_ZipFile {
 
     let fname = std::path::Path::new(&self.InputPath_str);
          let file = fs::File::open(&fname).unwrap();
-     
          let mut archive = zip::ZipArchive::new(file).unwrap();
         let mut MemoryFiles:Vec<DynamicImage> = Vec::new();
          for i in 0..archive.len() {
@@ -84,7 +86,8 @@ impl  Input_ZipFile {
                  file.read_to_end(&mut bf_out);
              
                  let mut im = image::load_from_memory(Some(bf_out).as_deref().unwrap());
-                
+                //let mut temp_im = &im;
+                //im.unwrap().save(&outpath);
                 MemoryFiles.push(im.unwrap());
                 // let mut outfile = fs::File::create(&outpath).unwrap();
                  
@@ -174,9 +177,9 @@ impl  Input_ZipFile {
 
 impl Input_MemoryFiles {
    
-    pub fn Convert_Size(&mut self) {
-        let outPath = std::path::Path::new(&self.OutputPath_str);
-        for im in &self.InputMemoryFiles{
+    pub fn Convert_Size(&mut self,outpath:String) {
+        let outPath = std::path::Path::new(&outpath);
+        for im in &self.InputMemoryFiles {
             
           match  im.save(outPath) {
             Ok(v) => println!("ok_save"),
@@ -195,33 +198,47 @@ impl Input_MemoryFiles {
         outpath: String
     ) -> zip::result::ZipResult<()>
     {
-        let it = &self.InputMemoryFiles;
-        let mut buf = Cursor::new(vec![]);
+        
+        
         let path_temp = Path::new(&outpath);
         let file = File::create(&path_temp).unwrap();
         let mut zip = zip::ZipWriter::new(file);
         let options = zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
        // let mut buf8 = &mut [];
-        
-        for im in it{
-          match  im.write_to(&mut buf,
-                ImageFormat::Jpeg){
-                    Ok(e) => {
-                        println!("s_buf");
-                        let mut temp_zip = ZipWriter::new(buf.clone());
-                       let temp_cursor= temp_zip.finish().unwrap();
-                            // And get a reference to the original [u8] slice
-    let r_buf = temp_cursor.get_ref();
-    // These are the bytes we want
-    
-                       //buf.write(buf8).unwrap();
-                        //let r_buf = buf.get_ref();
-                        zip.start_file(&outpath,options)?;
-                        zip.write_all(r_buf);
-                        println!("F_buf");
-                },
-                    Err(r) => println!("NG_buf")
-                }
+       let mut i_ =0;
+       let jpg_str = String::from(".jpg");
+       let mut buffer = Vec::new();
+       let name_temp = String::from("111.jpg");
+       let dir_temp = tempfile::tempdir()?;
+       let mut file_temp = tempfile::tempfile()?;
+       let temp_path = dir_temp.path().join(Path::new(&name_temp));
+
+        for mut im in &self.InputMemoryFiles{
+           file_temp.write_all(&im.as_bytes()).unwrap();
+           file_temp.flush();
+           match im.save(&temp_path) {
+            Ok(v) => println!("ok_save"),
+            Err(e)=> println!("Err{}",e)
+               
+           } 
+           i_ += 1;
+           let name_i = i_.to_string() + &jpg_str;
+
+
+           zip.start_file(&name_i, options);
+           //let mut f = File::open(&temp_path)?;
+          
+           // let mut outfile = fs::File::create(&name_i).unwrap();
+          // io::copy(&mut f, &mut outfile).unwrap();
+          
+           //f.read_to_end(&mut buffer)?;
+           file_temp.read_to_end(&mut buffer);
+           zip.write_all(&*buffer)?;
+           buffer.clear();
+           
+           
+            // let name_ = name_.clone() ;
+             //let i_str = i_.to_string();
         }
         zip.finish()?;
         println!("FINSH");

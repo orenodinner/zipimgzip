@@ -55,9 +55,9 @@ fn main() {
         InputMemoryFiles:v,
         OutputPath_str:String::from(outpath), debug_str:String::from("new"),
         ConvImages:Some(vec![image::DynamicImage::new_rgb32f(5, 5)])
-        ,Name:String::from("test_conv.zip")
+        ,Name:String::from("test")
     };
-    //mfiles.Convert_Size();
+  //  mfiles.Convert_Size(String::from("0011.jpg"));
     mfiles.CreateZipArchive(String::from("C:\\temp\\test_conv.zip"));
 
 }
