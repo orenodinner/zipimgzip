@@ -214,8 +214,7 @@ impl Input_MemoryFiles {
        let temp_path = dir_temp.path().join(Path::new(&name_temp));
 
         for mut im in &self.InputMemoryFiles{
-           file_temp.write_all(&im.as_bytes()).unwrap();
-           file_temp.flush();
+         
            match im.save(&temp_path) {
             Ok(v) => println!("ok_save"),
             Err(e)=> println!("Err{}",e)
@@ -232,8 +231,10 @@ impl Input_MemoryFiles {
           // io::copy(&mut f, &mut outfile).unwrap();
           
            //f.read_to_end(&mut buffer)?;
-           file_temp.read_to_end(&mut buffer);
-           zip.write_all(&*buffer)?;
+           
+           im.write_to( &mut file_temp, ImageFormat::Jpeg).unwrap();
+          file_temp.read_to_end(&mut buffer);
+           zip.write_all(&buffer)?;
            buffer.clear();
            
            
