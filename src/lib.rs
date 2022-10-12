@@ -10,6 +10,7 @@ use std::fs;
 use std::io;
 use image::imageops::FilterType;
 use image::{ImageFormat, buffer, DynamicImage, ImageResult, ImageError};
+use image::ImageEncoder;
 
 use zip::ZipWriter;
 use zip::read::ZipFile;
@@ -207,7 +208,7 @@ impl Input_MemoryFiles {
        // let mut buf8 = &mut [];
        let mut i_ =0;
        let jpg_str = String::from(".jpg");
-       let mut buffer = Vec::new();
+       //let mut buffer = Vec::new();
        let name_temp = String::from("111.jpg");
        let dir_temp = tempfile::tempdir()?;
        let mut file_temp = tempfile::tempfile()?;
@@ -226,16 +227,16 @@ impl Input_MemoryFiles {
 
            zip.start_file(&name_i, options);
            //let mut f = File::open(&temp_path)?;
-          
+           
+           image::codecs::jpeg::JpegEncoder::new_with_quality(&file_temp,50).write_image(buf, width, height, color_type);
            // let mut outfile = fs::File::create(&name_i).unwrap();
           // io::copy(&mut f, &mut outfile).unwrap();
           
            //f.read_to_end(&mut buffer)?;
            
-           im.write_to( &mut file_temp, ImageFormat::Jpeg).unwrap();
-          file_temp.read_to_end(&mut buffer);
-           zip.write_all(&buffer)?;
-           buffer.clear();
+           
+           zip.write_all(im.as_bytes())?;
+           //buffer.clear();
            
            
             // let name_ = name_.clone() ;
