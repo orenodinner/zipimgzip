@@ -1,3 +1,4 @@
+
 use std::borrow::BorrowMut;
 use std::env::temp_dir;
 use std::fmt::Error;
@@ -8,10 +9,11 @@ use std::fs::File;
 use std::io::{Read, BufReader, Seek,Write, SeekFrom, Result, Stdout};
 use std::fs;
 use std::io;
+use image::codecs::png::PngEncoder;
 use image::imageops::FilterType;
 use image::{ImageFormat, buffer, DynamicImage, ImageResult, ImageError};
 use image::ImageEncoder;
-
+use image::ImageBuffer;
 use zip::ZipWriter;
 use zip::read::ZipFile;
 
@@ -208,37 +210,44 @@ impl Input_MemoryFiles {
        // let mut buf8 = &mut [];
        let mut i_ =0;
        let jpg_str = String::from(".jpg");
-       //let mut buffer = Vec::new();
+       let png_str = String::from(".png");
        let name_temp = String::from("111.jpg");
        let dir_temp = tempfile::tempdir()?;
        let mut file_temp = tempfile::tempfile()?;
        let temp_path = dir_temp.path().join(Path::new(&name_temp));
+       //let mut _buffer = vec![];
 
         for mut im in &self.InputMemoryFiles{
-         
+         /* 
            match im.save(&temp_path) {
             Ok(v) => println!("ok_save"),
             Err(e)=> println!("Err{}",e)
                
-           } 
+           }*/ 
            i_ += 1;
-           let name_i = i_.to_string() + &jpg_str;
+          // let name_i = i_.to_string() + &jpg_str;
+           let name_i = i_.to_string() + &png_str;
 
 
            zip.start_file(&name_i, options);
            //let mut f = File::open(&temp_path)?;
+           let mut w = vec![];
            
-           image::codecs::jpeg::JpegEncoder::new_with_quality(&file_temp,50).write_image(buf, width, height, color_type);
+           image::codecs::png::PngEncoder::new(&mut w).write_image(im.as_bytes(), im.width(), im.height(), im.color());
+           //image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w,90).write_image(im.as_bytes(), im.width(), im.height(), im.color());
            // let mut outfile = fs::File::create(&name_i).unwrap();
           // io::copy(&mut f, &mut outfile).unwrap();
+
+        // im.write_to(&mut file_temp, ImageFormat::Png);
           
-           //f.read_to_end(&mut buffer)?;
+       // file_temp.read_to_end(&mut _buffer);
            
            
-           zip.write_all(im.as_bytes())?;
-           //buffer.clear();
+          // zip.write_all(&*w)?;
+          zip.write_all(&*w); 
+          //buffer.clear();
            
-           
+           println!("ok{}",&name_i);
             // let name_ = name_.clone() ;
              //let i_str = i_.to_string();
         }
