@@ -1,12 +1,11 @@
-
-use std::borrow::BorrowMut;
 use std::env::temp_dir;
 use std::fmt::Error;
 use std::ops::Add;
 use std::path::Path;
+use std::time::Instant;
 
 use std::fs::File;
-use std::io::{Read, BufReader, Seek,Write, SeekFrom, Result, Stdout};
+use std::io::{Read, BufReader, Seek,Write, SeekFrom, Result, Stdout, stdout};
 use std::fs;
 use std::io;
 use image::codecs::png::PngEncoder;
@@ -26,6 +25,7 @@ use zip::write::FileOptions;
 use walkdir::{DirEntry, WalkDir};
 use tempfile::TempDir;
 use tempfile::tempfile;
+//use indicatif::ProgressBar;
 
 
 pub  struct  Input_ZipFile {
@@ -55,7 +55,12 @@ impl  Input_ZipFile {
          let file = fs::File::open(&fname).unwrap();
          let mut archive = zip::ZipArchive::new(file).unwrap();
         let mut MemoryFiles:Vec<DynamicImage> = Vec::new();
+        //let mut temp_len = archive.len().clone();
+        //let p_bar = ProgressBar::new(temp_len as u64);
+       
+        let debug_Stime = std::time::Instant::now();
          for i in 0..archive.len() {
+            
              let mut file = archive.by_index(i).unwrap();
              let outpath = match file.enclosed_name() {
                  Some(path) => path.to_owned(),
@@ -68,17 +73,20 @@ impl  Input_ZipFile {
                      println!("File {} comment: {}", i, comment);
                  }
              }
-     
+             
              if (*file.name()).ends_with('/') {
-                 println!("File {} extracted to \"{}\"", i, outpath.display());
+                 println!("File {} ext \"{}\"", i, outpath.display());
                  fs::create_dir_all(&outpath).unwrap();
              } else {
-                 println!(
-                     "File {} extracted to \"{}\" ({} bytes)",
+                let debug_Etime= std::time::Instant::now();
+                 print!(
+                     "\rFile {} ext to \"{}\" ({} bytes){:?}",
                      i,
                      outpath.display(),
-                     file.size()
+                     file.size(),debug_Etime.duration_since(debug_Stime)
                  );
+                 stdout().flush().unwrap();
+                 let debug_Stime = std::time::Instant::now();
                  if let Some(p) = outpath.parent() {
                      if !p.exists() {
                          fs::create_dir_all(&p).unwrap();
@@ -105,6 +113,8 @@ impl  Input_ZipFile {
                      fs::set_permissions(&outpath, fs::Permissions::from_mode(mode)).unwrap();
                  }
              }
+            // p_bar.inc(1);
+            
          }
         if MemoryFiles.len() > 1 { return Some(MemoryFiles);}
         return None
@@ -182,6 +192,8 @@ impl Input_MemoryFiles {
    
     pub fn Convert_Size(&mut self,outpath:String) {
         let outPath = std::path::Path::new(&outpath);
+        //let mut temp_len = self.InputMemoryFiles.len().clone();
+        //let p_bar = ProgressBar::new(temp_len as u64);
         for im in &self.InputMemoryFiles {
             
           match  im.save(outPath) {
@@ -189,7 +201,7 @@ impl Input_MemoryFiles {
             Err(e)=> println!("Err{}",e)
               
           } 
-            
+           // p_bar.inc(1);
         }
     }
 
@@ -215,9 +227,13 @@ impl Input_MemoryFiles {
        let dir_temp = tempfile::tempdir()?;
        let mut file_temp = tempfile::tempfile()?;
        let temp_path = dir_temp.path().join(Path::new(&name_temp));
+      // let mut temp_len = self.InputMemoryFiles.len().clone();
+      // let p_bar = ProgressBar::new(temp_len as u64);
+
        //let mut _buffer = vec![];
 
         for mut im in &self.InputMemoryFiles{
+            let debug_Stime = std::time::Instant::now();
          /* 
            match im.save(&temp_path) {
             Ok(v) => println!("ok_save"),
@@ -246,8 +262,10 @@ impl Input_MemoryFiles {
           // zip.write_all(&*w)?;
           zip.write_all(&*w); 
           //buffer.clear();
-           
-           println!("ok{}",&name_i);
+          let debug_Etime = std::time::Instant::now();
+           print!("\rok{}_{:?}",&name_i,debug_Etime.duration_since(debug_Stime));
+           stdout().flush().unwrap();
+         //  p_bar.inc(1);
             // let name_ = name_.clone() ;
              //let i_str = i_.to_string();
         }

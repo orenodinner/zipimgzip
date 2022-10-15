@@ -39,7 +39,7 @@ fn main() {
     let  MemoryFiles = izip.Unzip_toMemory();
 
     match MemoryFiles  {
-        Some(r) =>  {println!("OKmem");
+        Some(r) =>  {println!("\nOKmem");
     WriteMemoryFiles(r, test_outpath)
     
     } ,
