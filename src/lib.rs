@@ -3,10 +3,11 @@ use std::fmt::Error;
 use std::ops::Add;
 use std::path::Path;
 use std::time::Instant;
+use std::path::PathBuf;
 
 use std::fs::File;
 use std::io::{Read, BufReader, Seek,Write, SeekFrom, Result, Stdout, stdout};
-use std::fs;
+use std::{fs, result};
 use std::io;
 use image::codecs::png::PngEncoder;
 use image::imageops::FilterType;
@@ -36,9 +37,18 @@ pub  struct  Input_ZipFile {
     
 }
 
+pub enum ConvMode {
+    width,
+    height,
+    both,
+    
+}
+
+
 pub struct Input_MemoryFiles{
 
     pub InputMemoryFiles:Vec<DynamicImage>,
+    pub OutNames:Vec<PathBuf>,
     pub OutputPath_str:String,
     pub debug_str:String,
     pub ConvImages:Option<Vec<image::DynamicImage>>,
@@ -49,12 +59,13 @@ pub struct Input_MemoryFiles{
 
 
 impl  Input_ZipFile {
-   pub fn Unzip_toMemory(&mut self)->Option<Vec<DynamicImage>>{
+   pub fn Unzip_toMemory(&mut self)->(Option<Vec<DynamicImage>>,Vec<PathBuf>){
 
     let fname = std::path::Path::new(&self.InputPath_str);
          let file = fs::File::open(&fname).unwrap();
          let mut archive = zip::ZipArchive::new(file).unwrap();
         let mut MemoryFiles:Vec<DynamicImage> = Vec::new();
+        let mut r_path = vec![];
         //let mut temp_len = archive.len().clone();
         //let p_bar = ProgressBar::new(temp_len as u64);
        
@@ -77,6 +88,8 @@ impl  Input_ZipFile {
              if (*file.name()).ends_with('/') {
                  println!("File {} ext \"{}\"", i, outpath.display());
                  fs::create_dir_all(&outpath).unwrap();
+                r_path.push(PathBuf::from(&outpath.to_str().unwrap()));
+                 MemoryFiles.push(DynamicImage::new_rgb32f(1, 1));
              } else {
                 let debug_Etime= std::time::Instant::now();
                  print!(
@@ -100,6 +113,7 @@ impl  Input_ZipFile {
                 //let mut temp_im = &im;
                 //im.unwrap().save(&outpath);
                 MemoryFiles.push(im.unwrap());
+                r_path.push(PathBuf::from(&outpath.to_str().unwrap()));
                 // let mut outfile = fs::File::create(&outpath).unwrap();
                  
              }
@@ -116,8 +130,46 @@ impl  Input_ZipFile {
             // p_bar.inc(1);
             
          }
-        if MemoryFiles.len() > 1 { return Some(MemoryFiles);}
-        return None
+        if MemoryFiles.len() > 1 { 
+            if MemoryFiles.len() != r_path.len(){print!("len anomaly ImageLen:{} pathLen:{}",MemoryFiles.len(),r_path.len());}
+            return (Some(MemoryFiles),r_path)}
+
+        return (None,r_path)
+    }
+
+    pub fn Unzip_conv_toMemory(&mut self,as_width:u32,as_height:u32,ConvMode:ConvMode)-> Vec<DynamicImage>{
+        let mut MemoryFiles:Vec<DynamicImage> = Vec::new();
+        let mut origin_images = vec![];
+        
+        let result_unzip = self.Unzip_toMemory();
+        let outpath_str = result_unzip.1;
+
+        match result_unzip.0 {
+             Some(r) =>{origin_images = r}
+            None =>{println!("toM_ERR")}
+        }
+
+       for o_im in origin_images{
+
+                match ConvMode {
+                    ConvMode::height =>{  
+                        let w_p = &as_height / &o_im.height();
+                        let as_width = &o_im.width() * &w_p;
+                    }
+                    ConvMode::width => {
+                        let h_p = &as_width / &o_im.width();
+                        let as_height = &o_im.height() * &h_p;
+                    }
+                    ConvMode::both =>{                       
+                    }
+    
+}
+        o_im.resize(as_width, as_height, FilterType::CatmullRom);
+        MemoryFiles.push(o_im);
+     
+       }
+       
+       return  MemoryFiles;
     }
 
 
@@ -231,7 +283,7 @@ impl Input_MemoryFiles {
       // let p_bar = ProgressBar::new(temp_len as u64);
 
        //let mut _buffer = vec![];
-
+let mut count_i = 0;
         for mut im in &self.InputMemoryFiles{
             let debug_Stime = std::time::Instant::now();
          /* 
@@ -245,12 +297,12 @@ impl Input_MemoryFiles {
            let name_i = i_.to_string() + &png_str;
 
 
-           zip.start_file(&name_i, options);
+           zip.start_file(self.OutNames[count_i].to_str().unwrap(), options);
            //let mut f = File::open(&temp_path)?;
            let mut w = vec![];
            
-           image::codecs::png::PngEncoder::new(&mut w).write_image(im.as_bytes(), im.width(), im.height(), im.color());
-           //image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w,90).write_image(im.as_bytes(), im.width(), im.height(), im.color());
+          // image::codecs::png::PngEncoder::new(&mut w).write_image(im.as_bytes(), im.width(), im.height(), im.color());
+           image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w,90).write_image(im.as_bytes(), im.width(), im.height(), im.color());
            // let mut outfile = fs::File::create(&name_i).unwrap();
           // io::copy(&mut f, &mut outfile).unwrap();
 
@@ -268,6 +320,7 @@ impl Input_MemoryFiles {
          //  p_bar.inc(1);
             // let name_ = name_.clone() ;
              //let i_str = i_.to_string();
+             count_i +=1;
         }
         zip.finish()?;
         println!("FINSH");

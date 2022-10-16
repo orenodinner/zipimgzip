@@ -5,6 +5,7 @@ use image::DynamicImage;
 use std::io::prelude::*;
 use std::io::{Seek, Write};
 use std::iter::Iterator;
+use std::path::PathBuf;
 use zip::result::ZipError;
 use zip::write::FileOptions;
 
@@ -21,6 +22,7 @@ fn main() {
     println!("Hello, world!");
     let test_path = String::from("C:\\temp\\test.zip");
     let test_outpath = String::from("C:\\temp\\1.jpg");
+    let test_pixels:[u32;2] =[750,1334];
     
     /* 
     let args: Vec<_> = std::env::args().collect();
@@ -38,21 +40,19 @@ fn main() {
     
     let  MemoryFiles = izip.Unzip_toMemory();
 
-    match MemoryFiles  {
+    match MemoryFiles.0  {
         Some(r) =>  {println!("\nOKmem");
-    WriteMemoryFiles(r, test_outpath)
-    
-    } ,
+    WriteMemoryFiles(r,MemoryFiles.1, test_outpath)} ,
         None    => println!("NGmem")
-        
-        
     }
 
 
-    fn WriteMemoryFiles(v:Vec<DynamicImage>,outpath: String){
+
+    fn WriteMemoryFiles(v:Vec<DynamicImage>,outnames:Vec<PathBuf>,outpath: String){
     
         let mut mfiles = Input_MemoryFiles{
         InputMemoryFiles:v,
+        OutNames:outnames,
         OutputPath_str:String::from(outpath), debug_str:String::from("new"),
         ConvImages:Some(vec![image::DynamicImage::new_rgb32f(5, 5)])
         ,Name:String::from("test")
