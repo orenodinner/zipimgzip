@@ -3,16 +3,6 @@
 version = 3
 
 [[package]]
-name = "ResizeImgZiper"
-version = "0.1.0"
-dependencies = [
- "image",
- "tempfile",
- "walkdir",
- "zip",
-]
-
-[[package]]
 name = "adler"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -938,6 +928,16 @@ dependencies = [
  "sha1",
  "time",
  "zstd",
+]
+
+[[package]]
+name = "zp_im_zp"
+version = "0.1.0"
+dependencies = [
+ "image",
+ "tempfile",
+ "walkdir",
+ "zip",
 ]
 
 [[package]]

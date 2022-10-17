@@ -1,6 +1,6 @@
 
-use ResizeImgZiper::InputZipFile;
-use ResizeImgZiper::InputMemoryFiles;
+use zp_im_zp::InputZipFile;
+use zp_im_zp::InputMemoryFiles;
 use image::DynamicImage;
 use std::io::prelude::*;
 use std::io::{Seek, Write};
@@ -57,7 +57,7 @@ fn main() {
         print:true
     };
   //  mfiles.Convert_Size(String::from("0011.jpg"));
-    mfiles.CreateZipArchive(String::from("C:\\temp\\test_conv.zip"));
+    mfiles.create_zip(String::from("C:\\temp\\test_conv.zip"));
 
 }
 

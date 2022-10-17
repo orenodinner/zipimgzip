@@ -150,22 +150,15 @@ impl  InputZipFile {
 
 impl InputMemoryFiles {
    
-    pub fn convert_size(&mut self,outpath:String) {
-        let out_path = std::path::Path::new(&outpath);
-        //let mut temp_len = self.InputMemoryFiles.len().clone();
-        //let p_bar = ProgressBar::new(temp_len as u64);
+    pub fn convert_size(&mut self) {
         for im in &self.input_memory_files {
             
-          match  im.save(out_path) {
-            Ok(v) => println!("ok_save"),
-            Err(e)=> println!("Err{}",e)
-              
-          } 
+        
            // p_bar.inc(1);
         }
     }
 
-    pub fn CreateZipArchive(&mut self,
+    pub fn create_zip(&mut self,
         outpath: String
     ) -> zip::result::ZipResult<()>
     {
@@ -175,55 +168,28 @@ impl InputMemoryFiles {
         let file = File::create(&path_temp).unwrap();
         let mut zip = zip::ZipWriter::new(file);
         let options = zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
-       // let mut buf8 = &mut [];
-       let mut i_ =0;
-       let jpg_str = String::from(".jpg");
-       let png_str = String::from(".png");
-       let name_temp = String::from("111.jpg");
-       let dir_temp = tempfile::tempdir()?;
-       let mut file_temp = tempfile::tempfile()?;
-       let temp_path = dir_temp.path().join(Path::new(&name_temp));
-      // let mut temp_len = self.InputMemoryFiles.len().clone();
-      // let p_bar = ProgressBar::new(temp_len as u64);
-
-       //let mut _buffer = vec![];
+        let mut _i =0;
+       
+    
 let mut count_i = 0;
         for mut im in &self.input_memory_files{
-            let debug_Stime = std::time::Instant::now();
-         /* 
-           match im.save(&temp_path) {
-            Ok(v) => println!("ok_save"),
-            Err(e)=> println!("Err{}",e)
-               
-           }*/ 
-           i_ += 1;
-          // let name_i = i_.to_string() + &jpg_str;
-           let name_i = i_.to_string() + &png_str;
+        let debug_s_time = std::time::Instant::now();
+       
+           _i += 1;
+        
 
-
-           zip.start_file(self.out_names[count_i].to_str().unwrap(), options);
-           //let mut f = File::open(&temp_path)?;
+         let _ =  zip.start_file(self.out_names[count_i].to_str().unwrap(), options);
+         
            let mut w = vec![];
            
           // image::codecs::png::PngEncoder::new(&mut w).write_image(im.as_bytes(), im.width(), im.height(), im.color());
-           image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w,90).write_image(im.as_bytes(), im.width(), im.height(), im.color());
-           // let mut outfile = fs::File::create(&name_i).unwrap();
-          // io::copy(&mut f, &mut outfile).unwrap();
-
-        // im.write_to(&mut file_temp, ImageFormat::Png);
-          
-       // file_temp.read_to_end(&mut _buffer);
-           
-           
-          // zip.write_all(&*w)?;
-          zip.write_all(&*w); 
-          //buffer.clear();
-          let debug_Etime = std::time::Instant::now();
-           print!("\rok{}_{:?}",self.out_names[count_i].to_str().unwrap(),debug_Etime.duration_since(debug_Stime));
+         let _ =  image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w,90).write_image(im.as_bytes(), im.width(), im.height(), im.color());
+      
+         let _ = zip.write_all(&*w); 
+        
+          let debug_e_time = std::time::Instant::now();
+           print!("\rok{}_{:?}",self.out_names[count_i].to_str().unwrap(),debug_e_time.duration_since(debug_s_time));
            stdout().flush().unwrap();
-         //  p_bar.inc(1);
-            // let name_ = name_.clone() ;
-             //let i_str = i_.to_string();
              count_i +=1;
         }
         zip.finish()?;
