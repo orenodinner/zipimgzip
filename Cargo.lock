@@ -931,7 +931,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "zp_im_zp"
+name = "zipimgzip"
 version = "0.1.0"
 dependencies = [
  "image",
