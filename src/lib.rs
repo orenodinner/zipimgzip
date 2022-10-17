@@ -1,67 +1,46 @@
-use std::env::temp_dir;
-use std::fmt::Error;
-use std::ops::Add;
 use std::path::Path;
-use std::time::Instant;
 use std::path::PathBuf;
 
 use std::fs::File;
-use std::io::{Read, BufReader, Seek,Write, SeekFrom, Result, Stdout, stdout};
-use std::{fs, result};
+use std::io::{Read,Write, stdout};
+use std::{fs};
 use std::io;
-use image::codecs::png::PngEncoder;
 use image::imageops::FilterType;
-use image::{ImageFormat, buffer, DynamicImage, ImageResult, ImageError};
+use image::{DynamicImage};
 use image::ImageEncoder;
-use image::ImageBuffer;
-use zip::ZipWriter;
-use zip::read::ZipFile;
-
-use std::io::prelude::*;
-use std::io::Cursor;
-
-use std::iter::Iterator;
-use zip::result::ZipError;
-use zip::write::FileOptions;
-use walkdir::{DirEntry, WalkDir};
-use tempfile::TempDir;
-use tempfile::tempfile;
-//use indicatif::ProgressBar;
 
 
-pub  struct  Input_ZipFile {
+pub  struct  InputZipFile {
 
-   pub  InputPath_str:String,
-   pub UnzipFile:Vec<image::DynamicImage>,
-   pub debug_str:String,
+   pub  input_path_str:String,
+   pub print:bool,
     
 }
 
 pub enum ConvMode {
-    width,
-    height,
-    both,
-    
+    Width,
+    Height,
+    Both,
 }
 
 
 pub struct Input_MemoryFiles{
 
     pub InputMemoryFiles:Vec<DynamicImage>,
-    pub OutNames:Vec<PathBuf>,
+    pub out_names:Vec<PathBuf>,
     pub OutputPath_str:String,
-    pub debug_str:String,
-    pub ConvImages:Option<Vec<image::DynamicImage>>,
-    pub Name:String
+    
+    pub Name:String,
+    pub print:bool
     
 }
 
 
 
-impl  Input_ZipFile {
+impl  InputZipFile {
    pub fn Unzip_toMemory(&mut self)->(Option<Vec<DynamicImage>>,Vec<PathBuf>){
 
-    let fname = std::path::Path::new(&self.InputPath_str);
+    let fname = std::path::Path::new(&self.input_path_str);
          let file = fs::File::open(&fname).unwrap();
          let mut archive = zip::ZipArchive::new(file).unwrap();
         let mut MemoryFiles:Vec<DynamicImage> = Vec::new();
@@ -86,19 +65,19 @@ impl  Input_ZipFile {
              }
              
              if (*file.name()).ends_with('/') {
-                 println!("File {} ext \"{}\"", i, outpath.display());
+              if self.print{   println!("File {} ext \"{}\"", i, outpath.display());}
                  fs::create_dir_all(&outpath).unwrap();
                 r_path.push(PathBuf::from(&outpath.to_str().unwrap()));
                  MemoryFiles.push(DynamicImage::new_rgb32f(1, 1));
              } else {
                 let debug_Etime= std::time::Instant::now();
-                 print!(
+              if self.print{   print!(
                      "\rFile {} ext to \"{}\" ({} bytes){:?}",
                      i,
                      outpath.display(),
                      file.size(),debug_Etime.duration_since(debug_Stime)
                  );
-                 stdout().flush().unwrap();
+                 stdout().flush().unwrap();}
                  let debug_Stime = std::time::Instant::now();
                  if let Some(p) = outpath.parent() {
                      if !p.exists() {
@@ -152,15 +131,15 @@ impl  Input_ZipFile {
        for o_im in origin_images{
 
                 match ConvMode {
-                    ConvMode::height =>{  
+                    ConvMode::Height =>{  
                         let w_p = &as_height / &o_im.height();
                         let as_width = &o_im.width() * &w_p;
                     }
-                    ConvMode::width => {
+                    ConvMode::Width => {
                         let h_p = &as_width / &o_im.width();
                         let as_height = &o_im.height() * &h_p;
                     }
-                    ConvMode::both =>{                       
+                    ConvMode::Both =>{                       
                     }
     
 }
@@ -173,19 +152,11 @@ impl  Input_ZipFile {
     }
 
 
-    pub fn Debug_str(&mut self)-> &String{
-        
-        return &self.debug_str
-    }
-    pub fn Debug(&mut self){
-
-      self.debug_str = String::from("okokok");
-      
-   }
+  
 
    pub fn Unzip2(&mut self) -> i32{
 
-         let fname = std::path::Path::new(&self.InputPath_str);
+         let fname = std::path::Path::new(&self.input_path_str);
          let file = fs::File::open(&fname).unwrap();
      
          let mut archive = zip::ZipArchive::new(file).unwrap();
@@ -297,7 +268,7 @@ let mut count_i = 0;
            let name_i = i_.to_string() + &png_str;
 
 
-           zip.start_file(self.OutNames[count_i].to_str().unwrap(), options);
+           zip.start_file(self.out_names[count_i].to_str().unwrap(), options);
            //let mut f = File::open(&temp_path)?;
            let mut w = vec![];
            
@@ -315,7 +286,7 @@ let mut count_i = 0;
           zip.write_all(&*w); 
           //buffer.clear();
           let debug_Etime = std::time::Instant::now();
-           print!("\rok{}_{:?}",&name_i,debug_Etime.duration_since(debug_Stime));
+           print!("\rok{}_{:?}",self.out_names[count_i].to_str().unwrap(),debug_Etime.duration_since(debug_Stime));
            stdout().flush().unwrap();
          //  p_bar.inc(1);
             // let name_ = name_.clone() ;

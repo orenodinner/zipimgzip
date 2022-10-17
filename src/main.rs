@@ -1,5 +1,5 @@
 
-use ResizeImgZiper::Input_ZipFile;
+use ResizeImgZiper::InputZipFile;
 use ResizeImgZiper::Input_MemoryFiles;
 use image::DynamicImage;
 use std::io::prelude::*;
@@ -32,11 +32,11 @@ fn main() {
     }*/
     
     
-    let mut izip = Input_ZipFile{
-        debug_str:String::from("new"),
+    let mut izip = InputZipFile{
+       print:true,
        // InputPath_str:String::from(&*args[1]),
-       InputPath_str:String::from(&test_path),
-        UnzipFile:vec![image::DynamicImage::new_rgb32f(5, 5)]};
+       input_path_str:String::from(&test_path),
+       };
     
     let  MemoryFiles = izip.Unzip_toMemory();
 
@@ -52,10 +52,9 @@ fn main() {
     
         let mut mfiles = Input_MemoryFiles{
         InputMemoryFiles:v,
-        OutNames:outnames,
-        OutputPath_str:String::from(outpath), debug_str:String::from("new"),
-        ConvImages:Some(vec![image::DynamicImage::new_rgb32f(5, 5)])
-        ,Name:String::from("test")
+        out_names:outnames,
+        OutputPath_str:String::from(outpath), 
+        Name:String::from("test"),print:true
     };
   //  mfiles.Convert_Size(String::from("0011.jpg"));
     mfiles.CreateZipArchive(String::from("C:\\temp\\test_conv.zip"));
