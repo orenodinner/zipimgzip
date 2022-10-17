@@ -1,6 +1,6 @@
 
 use ResizeImgZiper::InputZipFile;
-use ResizeImgZiper::Input_MemoryFiles;
+use ResizeImgZiper::InputMemoryFiles;
 use image::DynamicImage;
 use std::io::prelude::*;
 use std::io::{Seek, Write};
@@ -38,7 +38,7 @@ fn main() {
        input_path_str:String::from(&test_path),
        };
     
-    let  MemoryFiles = izip.Unzip_toMemory();
+    let  MemoryFiles = izip.unzip_to_memory();
 
     match MemoryFiles.0  {
         Some(r) =>  {println!("\nOKmem");
@@ -50,11 +50,11 @@ fn main() {
 
     fn WriteMemoryFiles(v:Vec<DynamicImage>,outnames:Vec<PathBuf>,outpath: String){
     
-        let mut mfiles = Input_MemoryFiles{
-        InputMemoryFiles:v,
+        let mut mfiles = InputMemoryFiles{
+        input_memory_files:v,
         out_names:outnames,
-        OutputPath_str:String::from(outpath), 
-        Name:String::from("test"),print:true
+        output_path_str:String::from(outpath), 
+        print:true
     };
   //  mfiles.Convert_Size(String::from("0011.jpg"));
     mfiles.CreateZipArchive(String::from("C:\\temp\\test_conv.zip"));

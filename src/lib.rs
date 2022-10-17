@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::fs::File;
 use std::io::{Read,Write, stdout};
 use std::{fs};
-use std::io;
+
 use image::imageops::FilterType;
 use image::{DynamicImage};
 use image::ImageEncoder;
@@ -24,13 +24,11 @@ pub enum ConvMode {
 }
 
 
-pub struct Input_MemoryFiles{
+pub struct InputMemoryFiles{
 
-    pub InputMemoryFiles:Vec<DynamicImage>,
+    pub input_memory_files:Vec<DynamicImage>,
     pub out_names:Vec<PathBuf>,
-    pub OutputPath_str:String,
-    
-    pub Name:String,
+    pub output_path_str:String,
     pub print:bool
     
 }
@@ -38,17 +36,17 @@ pub struct Input_MemoryFiles{
 
 
 impl  InputZipFile {
-   pub fn Unzip_toMemory(&mut self)->(Option<Vec<DynamicImage>>,Vec<PathBuf>){
+   pub fn unzip_to_memory(&mut self)->(Option<Vec<DynamicImage>>,Vec<PathBuf>){
 
     let fname = std::path::Path::new(&self.input_path_str);
          let file = fs::File::open(&fname).unwrap();
          let mut archive = zip::ZipArchive::new(file).unwrap();
-        let mut MemoryFiles:Vec<DynamicImage> = Vec::new();
+        let mut memory_files:Vec<DynamicImage> = Vec::new();
         let mut r_path = vec![];
         //let mut temp_len = archive.len().clone();
         //let p_bar = ProgressBar::new(temp_len as u64);
        
-        let debug_Stime = std::time::Instant::now();
+        let debug_s_time = std::time::Instant::now();
          for i in 0..archive.len() {
             
              let mut file = archive.by_index(i).unwrap();
@@ -68,17 +66,17 @@ impl  InputZipFile {
               if self.print{   println!("File {} ext \"{}\"", i, outpath.display());}
                  fs::create_dir_all(&outpath).unwrap();
                 r_path.push(PathBuf::from(&outpath.to_str().unwrap()));
-                 MemoryFiles.push(DynamicImage::new_rgb32f(1, 1));
+                 memory_files.push(DynamicImage::new_rgb32f(1, 1));
              } else {
-                let debug_Etime= std::time::Instant::now();
+                let debug_e_time= std::time::Instant::now();
               if self.print{   print!(
                      "\rFile {} ext to \"{}\" ({} bytes){:?}",
                      i,
                      outpath.display(),
-                     file.size(),debug_Etime.duration_since(debug_Stime)
+                     file.size(),debug_e_time.duration_since(debug_s_time)
                  );
                  stdout().flush().unwrap();}
-                 let debug_Stime = std::time::Instant::now();
+                 
                  if let Some(p) = outpath.parent() {
                      if !p.exists() {
                          fs::create_dir_all(&p).unwrap();
@@ -86,14 +84,13 @@ impl  InputZipFile {
                  }
                 
                  let mut bf_out:Vec<u8> = Vec::new();
-                 file.read_to_end(&mut bf_out);
+                 let _ =  file.read_to_end(&mut bf_out);
              
-                 let mut im = image::load_from_memory(Some(bf_out).as_deref().unwrap());
-                //let mut temp_im = &im;
-                //im.unwrap().save(&outpath);
-                MemoryFiles.push(im.unwrap());
+                 let im = image::load_from_memory(Some(bf_out).as_deref().unwrap());
+ 
+                memory_files.push(im.unwrap());
                 r_path.push(PathBuf::from(&outpath.to_str().unwrap()));
-                // let mut outfile = fs::File::create(&outpath).unwrap();
+  
                  
              }
      
@@ -101,125 +98,65 @@ impl  InputZipFile {
              #[cfg(unix)]
              {
                  use std::os::unix::fs::PermissionsExt;
-     
                  if let Some(mode) = file.unix_mode() {
                      fs::set_permissions(&outpath, fs::Permissions::from_mode(mode)).unwrap();
                  }
              }
-            // p_bar.inc(1);
-            
+                  
          }
-        if MemoryFiles.len() > 1 { 
-            if MemoryFiles.len() != r_path.len(){print!("len anomaly ImageLen:{} pathLen:{}",MemoryFiles.len(),r_path.len());}
-            return (Some(MemoryFiles),r_path)}
-
+        if memory_files.len() > 1 { 
+            if memory_files.len() != r_path.len(){print!("len anomaly ImageLen:{} pathLen:{}",memory_files.len(),r_path.len());}
+            return (Some(memory_files),r_path)
+        }
         return (None,r_path)
     }
 
-    pub fn Unzip_conv_toMemory(&mut self,as_width:u32,as_height:u32,ConvMode:ConvMode)-> Vec<DynamicImage>{
-        let mut MemoryFiles:Vec<DynamicImage> = Vec::new();
+    pub fn unzip_conv_to_memory(&mut self,as_width:u32,as_height:u32,conv_mode:ConvMode)-> Vec<DynamicImage>{
+        let mut memory_files:Vec<DynamicImage> = Vec::new();
         let mut origin_images = vec![];
         
-        let result_unzip = self.Unzip_toMemory();
-        let outpath_str = result_unzip.1;
+        let result_unzip = self.unzip_to_memory();
+        let _outpath_str = result_unzip.1;
 
         match result_unzip.0 {
              Some(r) =>{origin_images = r}
             None =>{println!("toM_ERR")}
         }
+        let mut conv_width = as_width.clone();
+        let mut conv_height  =as_height.clone();
 
        for o_im in origin_images{
 
-                match ConvMode {
+                match conv_mode {
                     ConvMode::Height =>{  
                         let w_p = &as_height / &o_im.height();
-                        let as_width = &o_im.width() * &w_p;
+                        conv_width = &o_im.width() * &w_p;
                     }
                     ConvMode::Width => {
                         let h_p = &as_width / &o_im.width();
-                        let as_height = &o_im.height() * &h_p;
+                        conv_height = &o_im.height() * &h_p;
                     }
                     ConvMode::Both =>{                       
                     }
-    
-}
-        o_im.resize(as_width, as_height, FilterType::CatmullRom);
-        MemoryFiles.push(o_im);
+                }
+        o_im.resize(conv_width, conv_height, FilterType::CatmullRom);
+        memory_files.push(o_im);
      
-       }
-       
-       return  MemoryFiles;
+       }  
+       return  memory_files;
     }
-
-
-  
-
-   pub fn Unzip2(&mut self) -> i32{
-
-         let fname = std::path::Path::new(&self.input_path_str);
-         let file = fs::File::open(&fname).unwrap();
-     
-         let mut archive = zip::ZipArchive::new(file).unwrap();
-     
-         for i in 0..archive.len() {
-             let mut file = archive.by_index(i).unwrap();
-             let outpath = match file.enclosed_name() {
-                 Some(path) => path.to_owned(),
-                 None => continue,
-             };
-     
-             {
-                 let comment = file.comment();
-                 if !comment.is_empty() {
-                     println!("File {} comment: {}", i, comment);
-                 }
-             }
-     
-             if (*file.name()).ends_with('/') {
-                 println!("File {} extracted to \"{}\"", i, outpath.display());
-                 fs::create_dir_all(&outpath).unwrap();
-             } else {
-                 println!(
-                     "File {} extracted to \"{}\" ({} bytes)",
-                     i,
-                     outpath.display(),
-                     file.size()
-                 );
-                 if let Some(p) = outpath.parent() {
-                     if !p.exists() {
-                         fs::create_dir_all(&p).unwrap();
-                     }
-                 }
-                 let mut outfile = fs::File::create(&outpath).unwrap();
-                 io::copy(&mut file, &mut outfile).unwrap();
-             }
-     
-             // Get and Set permissions
-             #[cfg(unix)]
-             {
-                 use std::os::unix::fs::PermissionsExt;
-     
-                 if let Some(mode) = file.unix_mode() {
-                     fs::set_permissions(&outpath, fs::Permissions::from_mode(mode)).unwrap();
-                 }
-             }
-         }
-     
-         0
-     }
-
 
 } 
 
-impl Input_MemoryFiles {
+impl InputMemoryFiles {
    
-    pub fn Convert_Size(&mut self,outpath:String) {
-        let outPath = std::path::Path::new(&outpath);
+    pub fn convert_size(&mut self,outpath:String) {
+        let out_path = std::path::Path::new(&outpath);
         //let mut temp_len = self.InputMemoryFiles.len().clone();
         //let p_bar = ProgressBar::new(temp_len as u64);
-        for im in &self.InputMemoryFiles {
+        for im in &self.input_memory_files {
             
-          match  im.save(outPath) {
+          match  im.save(out_path) {
             Ok(v) => println!("ok_save"),
             Err(e)=> println!("Err{}",e)
               
@@ -228,10 +165,6 @@ impl Input_MemoryFiles {
         }
     }
 
-    pub fn ZipArchive(&mut self){
-      
-
-    }
     pub fn CreateZipArchive(&mut self,
         outpath: String
     ) -> zip::result::ZipResult<()>
@@ -255,7 +188,7 @@ impl Input_MemoryFiles {
 
        //let mut _buffer = vec![];
 let mut count_i = 0;
-        for mut im in &self.InputMemoryFiles{
+        for mut im in &self.input_memory_files{
             let debug_Stime = std::time::Instant::now();
          /* 
            match im.save(&temp_path) {
