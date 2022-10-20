@@ -1,5 +1,3 @@
-//! [![ci-badge][]][ci] [![docs-badge][]][docs] [![crate-version]][crate-link]
-//! 
 //! Resize and ZipArchive the images in the Zip.
 //! (Zip -> Image -> ResizeImage -> Zip )
 //! 
