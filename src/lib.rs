@@ -140,7 +140,7 @@ impl MemoryImages {
             }
         }
 
-        for mut im in &self.input_memory_images {
+        for im in &self.input_memory_images {
             match conv_mode {
                 ConvMode::Height => {
                     let w_p: f32 = as_height as f32 / im.height() as f32;
