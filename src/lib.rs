@@ -1,3 +1,10 @@
+//! [![ci-badge][]][ci] [![docs-badge][]][docs] [![crate-version]][crate-link]
+//! 
+//! Resize and ZipArchive the images in the Zip.
+//! (Zip -> Image -> ResizeImage -> Zip )
+//! 
+
+
 use std::ffi::OsStr;
 use std::path::Path;
 use std::path::PathBuf;
@@ -10,6 +17,7 @@ use image::imageops::FilterType;
 use image::DynamicImage;
 use image::ImageEncoder;
 
+#[derive(Clone)]
 pub enum PrintMode {
     Print,
     Unprint,
@@ -126,18 +134,16 @@ impl MemoryImages {
     pub fn convert_size(&self, as_width: u32, as_height: u32, conv_mode: ConvMode) -> MemoryImages {
         let mut conv_images: Vec<DynamicImage> = Vec::new();
         let mut print = false;
-        let mut pm = PrintMode::Unprint;
+     
         let mut conv_width = as_width.clone();
         let mut conv_height = as_height.clone();
         match self.print_mode {
             PrintMode::Print => {
                 print = true;
-                pm = PrintMode::Print
-            }
+               }
             PrintMode::Unprint => {
                 print = false;
-                pm = PrintMode::Unprint
-            }
+               }
         }
 
         for im in &self.input_memory_images {
@@ -165,7 +171,7 @@ impl MemoryImages {
         return MemoryImages {
             input_memory_images: conv_images,
             out_names: self.out_names.clone(),
-            print_mode: pm,
+            print_mode: self.print_mode.clone(),
         };
     }
 
