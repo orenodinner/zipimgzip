@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'ResizeImgZiper'",
+            "name": "Debug executable 'zipimgzip'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=ResizeImgZiper",
-                    "--package=ResizeImgZiper"
+                    "--bin=zipimgzip",
+                    "--package=zipimgzip"
                 ],
                 "filter": {
-                    "name": "ResizeImgZiper",
+                    "name": "zipimgzip",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'ResizeImgZiper'",
+            "name": "Debug unit tests in executable 'zipimgzip'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=ResizeImgZiper",
-                    "--package=ResizeImgZiper"
+                    "--bin=zipimgzip",
+                    "--package=zipimgzip"
                 ],
                 "filter": {
-                    "name": "ResizeImgZiper",
+                    "name": "zipimgzip",
                     "kind": "bin"
                 }
             },
