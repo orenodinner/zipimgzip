@@ -150,7 +150,13 @@ impl MemoryImages {
                     let h_p: f32 = as_width as f32 / im.width() as f32;
                     conv_height = (im.height() as f32 * &h_p) as u32;
                 }
-                ConvMode::Both => {}
+                ConvMode::Both => {  
+                    let w_p: f32 = as_height as f32 / im.height() as f32;
+                    conv_width = ((im.width() as f32) * &w_p) as u32;
+                    if conv_width > as_width {
+                         let h_p: f32 = as_width as f32 / im.width() as f32;
+                        conv_height = (im.height() as f32 * &h_p) as u32;}         
+                 }
             }
             let conv_im = im.resize(conv_width, conv_height, FilterType::CatmullRom);
             conv_images.push(conv_im);
