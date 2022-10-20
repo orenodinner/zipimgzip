@@ -7,7 +7,6 @@ use zipimgzip::PrintMode;
 use zipimgzip::SaveFormat;
 
 fn main() {
-    println!("Hello, world!");
     let test_path = String::from("C:\\temp\\test.zip");
     let test_outpath = String::from("C:\\temp\\conv.zip");
     let test_pixels: [u32; 2] = [750, 1334];
