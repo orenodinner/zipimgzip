@@ -190,9 +190,9 @@ impl MemoryImages {
             let _ = zip.start_file(self.out_names[count_i].to_str().unwrap(), options);
 
             let mut w = vec![];
-            let os_str_jpg = OsStr::new("jpg");
-            let os_str_jpeg = OsStr::new("jpeg");
-            let os_str_png = OsStr::new("png");
+            let _os_str_jpg = OsStr::new("jpg");
+            let _os_str_jpeg = OsStr::new("jpeg");
+            let _os_str_png = OsStr::new("png");
 
             match _save_format {
                 SaveFormat::Jpeg => {
@@ -211,7 +211,7 @@ impl MemoryImages {
                 SaveFormat::Ref => match self.out_names[count_i].extension() {
                     None => {}
                     Some(r) => match r {
-                        os_str_jpg => {
+                        _os_str_jpg => {
                             let _ =
                                 image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                                     .write_image(
@@ -221,7 +221,7 @@ impl MemoryImages {
                                         im.color(),
                                     );
                         }
-                        os_str_jpeg => {
+                        _os_str_jpeg => {
                             let _ =
                                 image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                                     .write_image(
@@ -231,13 +231,23 @@ impl MemoryImages {
                                         im.color(),
                                     );
                         }
-                        os_str_png => {
+                        _os_str_png => {
                             let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
                                 im.as_bytes(),
                                 im.width(),
                                 im.height(),
                                 im.color(),
                             );
+                        }
+                        _ => {
+                            let _ =
+                                image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
+                                    .write_image(
+                                        im.as_bytes(),
+                                        im.width(),
+                                        im.height(),
+                                        im.color(),
+                                    );
                         }
                     },
                 },
