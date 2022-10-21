@@ -1,7 +1,6 @@
 //! Resize and ZipArchive the images in the Zip.
 //! (Zip -> Image -> ResizeImage -> Zip )
-//! 
-
+//!
 
 use std::ffi::OsStr;
 use std::path::Path;
@@ -14,6 +13,8 @@ use std::io::{stdout, Read, Write};
 use image::imageops::FilterType;
 use image::DynamicImage;
 use image::ImageEncoder;
+use zip::result::ZipError;
+use zip::ZipArchive;
 
 #[derive(Clone)]
 pub enum PrintMode {
@@ -35,8 +36,24 @@ pub enum SaveFormat {
 
 pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryImages {
     let fname = std::path::Path::new(&input_path_str);
-    let file = fs::File::open(&fname).unwrap();
-    let mut archive = zip::ZipArchive::new(file).unwrap();
+    let file;
+    match fs::File::open(&fname) {
+        Err(e) => {
+            println!("ZipFile_FindError_{:?}", e);
+            panic!()
+        }
+        Ok(r) => file = r,
+    };
+
+    let mut archive;
+    match zip::ZipArchive::new(file) {
+        Err(ZipError) => {
+            println!("ZipFile_FindError_{:?}", ZipError);
+            panic!()
+        }
+        Ok(ZipArchive) => archive = ZipArchive,
+    }
+
     let mut memory_images: Vec<DynamicImage> = Vec::new();
     let mut r_path = vec![];
     let debug_s_time = std::time::Instant::now();
@@ -45,9 +62,19 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
         PrintMode::Print => print = true,
         PrintMode::Unprint => print = false,
     }
+    let archive_len = (&archive.len() -1);
 
     for i in 0..archive.len() {
-        let mut file = archive.by_index(i).unwrap();
+        let mut file;
+
+        match archive.by_index(i) {
+            Err(ZipError) => {
+                println!("ZipFile_OpenError_{:?}_Num*{}*", ZipError, i);
+                panic!()
+            }
+            Ok(r) => file = r,
+        }
+
         let outpath = match file.enclosed_name() {
             Some(path) => path.to_owned(),
             None => continue,
@@ -62,7 +89,7 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
 
         if (*file.name()).ends_with('/') {
             if print {
-                println!("File {} ext \"{}\"", i, outpath.display());
+                print!("\rFile {}/{} ext \"{}\"", i,archive_len, outpath.display());
             }
             fs::create_dir_all(&outpath).unwrap();
             r_path.push(PathBuf::from(&outpath.to_str().unwrap()));
@@ -71,28 +98,64 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
             let debug_e_time = std::time::Instant::now();
             if print {
                 print!(
-                    "\rFile {} ext to \"{}\" ({} bytes){:?}",
-                    i,
+                    "\rFile {}/{} ext to \"{}\" ({} bytes){:?}",
+                    i,archive_len,
                     outpath.display(),
                     file.size(),
                     debug_e_time.duration_since(debug_s_time)
                 );
-                stdout().flush().unwrap();
+
+                match stdout().flush() {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("stdout_Err{:?}", e)
+                    }
+                }
             }
 
             if let Some(p) = outpath.parent() {
                 if !p.exists() {
-                    fs::create_dir_all(&p).unwrap();
+                    match fs::create_dir_all(&p) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("fs::create_dir_all_Err{:?}", e)
+                        }
+                    }
                 }
             }
 
             let mut bf_out: Vec<u8> = Vec::new();
             let _ = file.read_to_end(&mut bf_out);
+            let from_memory;
+            let some_bf_out = Some(bf_out);
+            match some_bf_out.as_deref() {
+                Some(r) => from_memory = r,
+                None => {
+                    println!("file_read_to_end_Buf_Error");
+                    panic!()
+                }
+            }
 
-            let im = image::load_from_memory(Some(bf_out).as_deref().unwrap());
+            let im;
+            match image::load_from_memory(from_memory) {
+                Err(e) => {
+                    println!("Image_Load_Error{}", e);
+                    panic!()
+                }
+                Ok(r) => im = r,
+            }
+            memory_images.push(im);
 
-            memory_images.push(im.unwrap());
-            r_path.push(PathBuf::from(&outpath.to_str().unwrap()));
+            let outpath_str;
+            let outpath_opt = &outpath.to_str();
+            match outpath_opt {
+                None => {
+                    println!("OutPath_toStr_Error");
+                    panic!()
+                }
+                Some(r) => outpath_str = r,
+            }
+            r_path.push(PathBuf::from(outpath_str));
         }
 
         // Get and Set permissions
@@ -132,19 +195,22 @@ impl MemoryImages {
     pub fn convert_size(&self, as_width: u32, as_height: u32, conv_mode: ConvMode) -> MemoryImages {
         let mut conv_images: Vec<DynamicImage> = Vec::new();
         let mut print = false;
-     
+
         let mut conv_width = as_width.clone();
         let mut conv_height = as_height.clone();
         match self.print_mode {
             PrintMode::Print => {
                 print = true;
-               }
+            }
             PrintMode::Unprint => {
                 print = false;
-               }
+            }
         }
+        if print {println!("");}
 
+        let mut im_i =0;
         for im in &self.input_memory_images {
+            let debug_s_time = std::time::Instant::now();
             match conv_mode {
                 ConvMode::Height => {
                     let w_p: f32 = as_height as f32 / im.height() as f32;
@@ -154,18 +220,29 @@ impl MemoryImages {
                     let h_p: f32 = as_width as f32 / im.width() as f32;
                     conv_height = (im.height() as f32 * &h_p) as u32;
                 }
-                ConvMode::Both => {  
+                ConvMode::Both => {
                     let w_p: f32 = as_height as f32 / im.height() as f32;
                     conv_width = ((im.width() as f32) * &w_p) as u32;
                     if conv_width > as_width {
-                         let h_p: f32 = as_width as f32 / im.width() as f32;
-                        conv_height = (im.height() as f32 * &h_p) as u32;}         
-                 }
+                        let h_p: f32 = as_width as f32 / im.width() as f32;
+                        conv_height = (im.height() as f32 * &h_p) as u32;
+                    }
+                }
             }
             let conv_im = im.resize(conv_width, conv_height, FilterType::CatmullRom);
             conv_images.push(conv_im);
-            // p_bar.inc(1);
+            let debug_e_time = std::time::Instant::now();
+           
+            if print {print!("\rimage {}/{} conv to [{},{}] :{:?}",im_i,(&self.input_memory_images.len() -1),conv_width,conv_height,debug_e_time.duration_since(debug_s_time));}
+            match stdout().flush() {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("stdout_Err{:?}", e)
+                }
+            }
+            im_i +=1;
         }
+        if print{println!("")}
         return MemoryImages {
             input_memory_images: conv_images,
             out_names: self.out_names.clone(),
@@ -183,6 +260,16 @@ impl MemoryImages {
         let file = File::create(&path_temp).unwrap();
         let mut zip = zip::ZipWriter::new(file);
 
+        let mut print = false;
+        match self.print_mode {
+            PrintMode::Print => {
+                print = true;
+            }
+            PrintMode::Unprint => {
+                print = false;
+            }
+        }
+
         let options =
             zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
@@ -191,6 +278,7 @@ impl MemoryImages {
         if quality > 100 {
             quality = 100
         };
+
 
         for im in &self.input_memory_images {
             let debug_s_time = std::time::Instant::now();
@@ -272,7 +360,7 @@ impl MemoryImages {
 
             let debug_e_time = std::time::Instant::now();
             print!(
-                "\rok{}_{:?}",
+                "\rArchive to {}_{:?}",
                 self.out_names[count_i].to_str().unwrap(),
                 debug_e_time.duration_since(debug_s_time)
             );
@@ -280,7 +368,7 @@ impl MemoryImages {
             count_i += 1;
         }
         zip.finish()?;
-        println!("FINSH");
+       if print{ println!("\nFINSH")};
         Ok(())
     }
 }
