@@ -102,8 +102,22 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
             if print {
                 print!("\rFile {}/{} ext \"{}\"", i, archive_len, outpath.display());
             }
-            fs::create_dir_all(&outpath).unwrap();
-            r_path.push(PathBuf::from(&outpath.to_str().unwrap()));
+            match fs::create_dir_all(&outpath) {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("DirPath_Creat_Err{}", e);
+                    panic!()
+                }
+            }
+            let to_str: &str;
+            match &outpath.to_str() {
+                Some(r) => to_str = r,
+                None => {
+                    println!("to_str()_Error");
+                    panic!()
+                }
+            }
+            r_path.push(PathBuf::from(to_str));
             memory_images.push(DynamicImage::new_rgb32f(1, 1));
         } else {
             let debug_e_time = std::time::Instant::now();
@@ -175,7 +189,12 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
         {
             use std::os::unix::fs::PermissionsExt;
             if let Some(mode) = file.unix_mode() {
-                fs::set_permissions(&outpath, fs::Permissions::from_mode(mode)).unwrap();
+                match fs::set_permissions(&outpath, fs::Permissions::from_mode(mode)) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("UnixError{}", e)
+                    }
+                }
             }
         }
     }
@@ -282,7 +301,14 @@ impl MemoryImages {
         mut quality: u8,
     ) -> zip::result::ZipResult<()> {
         let path_temp = Path::new(&outpath);
-        let file = File::create(&path_temp).unwrap();
+        let file: File;
+        match File::create(&path_temp) {
+            Ok(r) => file = r,
+            Err(e) => {
+                println!("OutPath_Error{}", e);
+                panic!()
+            }
+        }
         let mut zip = zip::ZipWriter::new(file);
 
         let print;
@@ -308,8 +334,16 @@ impl MemoryImages {
             let debug_s_time = std::time::Instant::now();
 
             _i += 1;
+            let start_name: &str;
+            match self.out_names[count_i].to_str() {
+                Some(r) => start_name = r,
+                None => {
+                    println!("to_str()_Error");
+                    panic!()
+                }
+            }
 
-            let _ = zip.start_file(self.out_names[count_i].to_str().unwrap(), options);
+            let _ = zip.start_file(start_name, options);
 
             let mut w = vec![];
             let _os_str_jpg = OsStr::new("jpg");
@@ -384,9 +418,19 @@ impl MemoryImages {
             let _ = zip.write_all(&*w);
 
             let debug_e_time = std::time::Instant::now();
+
+            let to_str: &str;
+            match self.out_names[count_i].to_str() {
+                Some(r) => to_str = r,
+                None => {
+                    println!("to_str()_Error");
+                    panic!()
+                }
+            }
+
             print!(
                 "\rArchive to {}_{:?}",
-                self.out_names[count_i].to_str().unwrap(),
+                to_str,
                 debug_e_time.duration_since(debug_s_time)
             );
             stdout().flush().unwrap();
