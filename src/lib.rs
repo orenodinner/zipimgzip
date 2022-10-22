@@ -12,12 +12,12 @@ use std::fs;
 use std::fs::File;
 use std::io::{stdout, Read, Write};
 
+use encoding_rs;
 use image::imageops::FilterType;
 use image::DynamicImage;
 use image::ImageEncoder;
 use zip::result::ZipError;
 use zip::ZipArchive;
-use encoding_rs;
 
 #[derive(Clone)]
 pub enum PrintMode {
@@ -65,11 +65,11 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
         PrintMode::Print => print = true,
         PrintMode::Unprint => print = false,
     }
-    let archive_len = (&archive.len() -1);
+    let archive_len = (&archive.len() - 1);
 
     for i in 0..archive.len() {
         let mut file;
-        
+
         match archive.by_index(i) {
             Err(ZipError) => {
                 println!("ZipFile_OpenError_{:?}_Num*{}*", ZipError, i);
@@ -79,20 +79,21 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
         }
 
         let file_name = file.name_raw();
-        
-        let outpath:PathBuf;
+
+        let outpath: PathBuf;
         match std::str::from_utf8(file_name) {
-            Ok(r) =>{outpath = PathBuf::from(r);},
-            Err(e)=>{ 
-                let a  = &shift_jis_encode(&file_name).clone();
+            Ok(r) => {
+                outpath = PathBuf::from(r);
+            }
+            Err(e) => {
+                let a = &shift_jis_encode(&file_name).clone();
                 outpath = PathBuf::from(a);
-             }
+            }
         }
-       /*  let outpath = match file.name_raw() {
+        /*  let outpath = match file.name_raw() {
             Some(path) => path.to_owned(),
             None => continue,
         };*/
-        println!("path{}",&outpath.display());
 
         {
             let comment = file.comment();
@@ -101,10 +102,9 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
             }
         }
 
-
         if (*file.name()).ends_with('/') {
             if print {
-                print!("\rFile {}/{} ext \"{}\"", i,archive_len, outpath.display());
+                print!("\rFile {}/{} ext \"{}\"", i, archive_len, outpath.display());
             }
             fs::create_dir_all(&outpath).unwrap();
             r_path.push(PathBuf::from(&outpath.to_str().unwrap()));
@@ -114,7 +114,8 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
             if print {
                 print!(
                     "\rFile {}/{} ext to \"{}\" ({} bytes){:?}",
-                    i,archive_len,
+                    i,
+                    archive_len,
                     outpath.display(),
                     file.size(),
                     debug_e_time.duration_since(debug_s_time)
@@ -221,9 +222,11 @@ impl MemoryImages {
                 print = false;
             }
         }
-        if print {println!("");}
+        if print {
+            println!("");
+        }
 
-        let mut im_i =0;
+        let mut im_i = 0;
         for im in &self.input_memory_images {
             let debug_s_time = std::time::Instant::now();
             match conv_mode {
@@ -247,17 +250,28 @@ impl MemoryImages {
             let conv_im = im.resize(conv_width, conv_height, FilterType::CatmullRom);
             conv_images.push(conv_im);
             let debug_e_time = std::time::Instant::now();
-           
-            if print {print!("\rimage {}/{} conv to [{},{}] :{:?}",im_i,(&self.input_memory_images.len() -1),conv_width,conv_height,debug_e_time.duration_since(debug_s_time));}
+
+            if print {
+                print!(
+                    "\rimage {}/{} conv to [{},{}] :{:?}",
+                    im_i,
+                    (&self.input_memory_images.len() - 1),
+                    conv_width,
+                    conv_height,
+                    debug_e_time.duration_since(debug_s_time)
+                );
+            }
             match stdout().flush() {
                 Ok(_) => {}
                 Err(e) => {
                     println!("stdout_Err{:?}", e)
                 }
             }
-            im_i +=1;
+            im_i += 1;
         }
-        if print{println!("")}
+        if print {
+            println!("")
+        }
         return MemoryImages {
             input_memory_images: conv_images,
             out_names: self.out_names.clone(),
@@ -293,7 +307,6 @@ impl MemoryImages {
         if quality > 100 {
             quality = 100
         };
-
 
         for im in &self.input_memory_images {
             let debug_s_time = std::time::Instant::now();
@@ -383,13 +396,15 @@ impl MemoryImages {
             count_i += 1;
         }
         zip.finish()?;
-       if print{ println!("\nFINSH")};
+        if print {
+            println!("\nFINSH")
+        };
         Ok(())
     }
 }
 
-fn shift_jis_encode(input:&[u8]) ->String{
-    let ( res,_,_) = encoding_rs::SHIFT_JIS.decode(input);
-             let a  = res.into_owned();
-            return a;
+fn shift_jis_encode(input: &[u8]) -> String {
+    let (res, _, _) = encoding_rs::SHIFT_JIS.decode(input);
+    let a = res.into_owned();
+    return a;
 }
