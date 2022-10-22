@@ -6,8 +6,6 @@ use std::ffi::OsStr;
 use std::path::Path;
 use std::path::PathBuf;
 
-use std::str;
-
 use std::fs;
 use std::fs::File;
 use std::io::{stdout, Read, Write};
@@ -16,8 +14,6 @@ use encoding_rs;
 use image::imageops::FilterType;
 use image::DynamicImage;
 use image::ImageEncoder;
-use zip::result::ZipError;
-use zip::ZipArchive;
 
 #[derive(Clone)]
 pub enum PrintMode {
@@ -50,29 +46,29 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
 
     let mut archive;
     match zip::ZipArchive::new(file) {
-        Err(ZipError) => {
-            println!("ZipFile_FindError_{:?}", ZipError);
+        Err(zip_error) => {
+            println!("ZipFile_FindError_{:?}", zip_error);
             panic!()
         }
-        Ok(ZipArchive) => archive = ZipArchive,
+        Ok(zip_archive) => archive = zip_archive,
     }
 
     let mut memory_images: Vec<DynamicImage> = Vec::new();
     let mut r_path = vec![];
     let debug_s_time = std::time::Instant::now();
-    let mut print = false;
+    let print;
     match print_mode {
         PrintMode::Print => print = true,
         PrintMode::Unprint => print = false,
     }
-    let archive_len = (&archive.len() - 1);
+    let archive_len = &archive.len() - 1;
 
     for i in 0..archive.len() {
         let mut file;
 
         match archive.by_index(i) {
-            Err(ZipError) => {
-                println!("ZipFile_OpenError_{:?}_Num*{}*", ZipError, i);
+            Err(zip_error) => {
+                println!("ZipFile_OpenError_{:?}_Num*{}*", zip_error, i);
                 panic!()
             }
             Ok(r) => file = r,
@@ -85,7 +81,7 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
             Ok(r) => {
                 outpath = PathBuf::from(r);
             }
-            Err(e) => {
+            Err(_e) => {
                 let a = &shift_jis_encode(&file_name).clone();
                 outpath = PathBuf::from(a);
             }
@@ -289,7 +285,7 @@ impl MemoryImages {
         let file = File::create(&path_temp).unwrap();
         let mut zip = zip::ZipWriter::new(file);
 
-        let mut print = false;
+        let print;
         match self.print_mode {
             PrintMode::Print => {
                 print = true;
@@ -365,6 +361,7 @@ impl MemoryImages {
                                 im.color(),
                             );
                         }
+
                         _ => {
                             let _ =
                                 image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
