@@ -6,6 +6,8 @@ use std::ffi::OsStr;
 use std::path::Path;
 use std::path::PathBuf;
 
+use std::str;
+
 use std::fs;
 use std::fs::File;
 use std::io::{stdout, Read, Write};
@@ -15,6 +17,7 @@ use image::DynamicImage;
 use image::ImageEncoder;
 use zip::result::ZipError;
 use zip::ZipArchive;
+use encoding_rs;
 
 #[derive(Clone)]
 pub enum PrintMode {
@@ -66,7 +69,7 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
 
     for i in 0..archive.len() {
         let mut file;
-
+        
         match archive.by_index(i) {
             Err(ZipError) => {
                 println!("ZipFile_OpenError_{:?}_Num*{}*", ZipError, i);
@@ -75,10 +78,21 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
             Ok(r) => file = r,
         }
 
-        let outpath = match file.enclosed_name() {
+        let file_name = file.name_raw();
+        
+        let outpath:PathBuf;
+        match std::str::from_utf8(file_name) {
+            Ok(r) =>{outpath = PathBuf::from(r);},
+            Err(e)=>{ 
+                let a  = &shift_jis_encode(&file_name).clone();
+                outpath = PathBuf::from(a);
+             }
+        }
+       /*  let outpath = match file.name_raw() {
             Some(path) => path.to_owned(),
             None => continue,
-        };
+        };*/
+        println!("path{}",&outpath.display());
 
         {
             let comment = file.comment();
@@ -86,6 +100,7 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
                 println!("File {} comment: {}", i, comment);
             }
         }
+
 
         if (*file.name()).ends_with('/') {
             if print {
@@ -371,4 +386,10 @@ impl MemoryImages {
        if print{ println!("\nFINSH")};
         Ok(())
     }
+}
+
+fn shift_jis_encode(input:&[u8]) ->String{
+    let ( res,_,_) = encoding_rs::SHIFT_JIS.decode(input);
+             let a  = res.into_owned();
+            return a;
 }
