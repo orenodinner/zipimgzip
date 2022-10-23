@@ -428,12 +428,19 @@ impl MemoryImages {
                 }
             }
 
+            if print{
             print!(
                 "\rArchive to {}_{:?}",
                 to_str,
-                debug_e_time.duration_since(debug_s_time)
-            );
-            stdout().flush().unwrap();
+                debug_e_time.duration_since(debug_s_time));
+                match stdout().flush() {
+                    Ok(_) => {}
+                    Err(e) => {
+                        println!("stdout_Err{:?}", e)
+                    }
+                }
+        }
+            
             count_i += 1;
         }
         zip.finish()?;
