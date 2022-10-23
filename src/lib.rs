@@ -1,6 +1,23 @@
+//!
+//! # Docs
 //! Resize and ZipArchive the images in the Zip.
 //! (Zip -> Image -> ResizeImage -> Zip )
 //!
+//! ## Example
+//! ```rust
+//! fn main() -> Result<(), io::Error> {
+//! let test_path = String::from("C:\\temp\\test.zip");
+//! let test_outpath = String::from("C:\\temp\\conv.zip");
+//! let test_pixels: [u32; 2] = [750, 1334];
+//! let test_quality: u8 = 90;
+//!
+//! let _ = unzip_to_memory(test_path, PrintMode::Print)?
+//! .convert_size(test_pixels[0], test_pixels[1], ConvMode::Height)?
+//! .create_zip(test_outpath, SaveFormat::Ref, test_quality)?;
+//! }
+//!
+//! return OK(());
+//! ```
 
 use std::ffi::OsStr;
 use std::io;
@@ -15,7 +32,6 @@ use encoding_rs;
 use image::imageops::FilterType;
 use image::DynamicImage;
 use image::ImageEncoder;
-use zip::result::ZipError;
 
 #[derive(Clone)]
 pub enum PrintMode {
@@ -133,7 +149,7 @@ pub fn unzip_to_memory(
             let im;
             match image::load_from_memory(from_memory) {
                 Err(e) => {
-                    return Err((io::Error::new(io::ErrorKind::Other, e.to_string())));
+                    return Err(io::Error::new(io::ErrorKind::Other, e.to_string()));
                 }
                 Ok(r) => im = r,
             }
@@ -292,7 +308,7 @@ impl MemoryImages {
             match self.out_names[count_i].to_str() {
                 Some(r) => start_name = r,
                 None => {
-                    return Err((io::Error::new(io::ErrorKind::Other, "to_str()_Error")));
+                    return Err(io::Error::new(io::ErrorKind::Other, "to_str()_Error"));
                 }
             }
 
@@ -376,7 +392,7 @@ impl MemoryImages {
             match self.out_names[count_i].to_str() {
                 Some(r) => to_str = r,
                 None => {
-                    return Err((io::Error::new(io::ErrorKind::Other, "to_str()_Error")));
+                    return Err(io::Error::new(io::ErrorKind::Other, "to_str()_Error"));
                 }
             }
 
@@ -391,11 +407,11 @@ impl MemoryImages {
 
             count_i += 1;
         }
-        let rd = zip.finish()?;
+        let zip_file = zip.finish()?;
         if print {
             println!("\nFINSH")
         };
-        return Ok(rd);
+        return Ok(zip_file);
     }
 }
 

@@ -13,8 +13,8 @@ fn main() -> Result<(), io::Error> {
     let test_pixels: [u32; 2] = [750, 1334];
     let test_quality: u8 = 90;
 
-    let _ = unzip_to_memory(test_path, PrintMode::Unprint)?
+    let _ = unzip_to_memory(test_path, PrintMode::Print)?
         .convert_size(test_pixels[0], test_pixels[1], ConvMode::Height)?
-        .create_zip(test_outpath, SaveFormat::Ref, test_quality);
+        .create_zip(test_outpath, SaveFormat::Ref, test_quality)?;
     return Ok(());
 }
