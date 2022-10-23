@@ -5,6 +5,7 @@
 use std::ffi::OsStr;
 use std::path::Path;
 use std::path::PathBuf;
+use std::io;
 
 use std::fs;
 use std::fs::File;
@@ -14,6 +15,7 @@ use encoding_rs;
 use image::imageops::FilterType;
 use image::DynamicImage;
 use image::ImageEncoder;
+use zip::result::ZipError;
 
 #[derive(Clone)]
 pub enum PrintMode {
@@ -33,25 +35,12 @@ pub enum SaveFormat {
     Ref,
 }
 
-pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryImages {
+pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> Result<MemoryImages, io::Error>{
     let fname = std::path::Path::new(&input_path_str);
-    let file;
-    match fs::File::open(&fname) {
-        Err(e) => {
-            println!("ZipFile_FindError_{:?}", e);
-            panic!()
-        }
-        Ok(r) => file = r,
-    };
+    let file = fs::File::open(&fname)?;
 
-    let mut archive;
-    match zip::ZipArchive::new(file) {
-        Err(zip_error) => {
-            println!("ZipFile_FindError_{:?}", zip_error);
-            panic!()
-        }
-        Ok(zip_archive) => archive = zip_archive,
-    }
+    let mut archive =zip::ZipArchive::new(file)?;
+        
 
     let mut memory_images: Vec<DynamicImage> = Vec::new();
     let mut r_path = vec![];
@@ -64,15 +53,7 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
     let archive_len = &archive.len() - 1;
 
     for i in 0..archive.len() {
-        let mut file;
-
-        match archive.by_index(i) {
-            Err(zip_error) => {
-                println!("ZipFile_OpenError_{:?}_Num*{}*", zip_error, i);
-                panic!()
-            }
-            Ok(r) => file = r,
-        }
+        let mut file = archive.by_index(i)?;
 
         let file_name = file.name_raw();
 
@@ -102,19 +83,13 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
             if print {
                 print!("\rFile {}/{} ext \"{}\"", i, archive_len, outpath.display());
             }
-            match fs::create_dir_all(&outpath) {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("DirPath_Creat_Err{}", e);
-                    panic!()
-                }
-            }
+            fs::create_dir_all(&outpath)?;
+        
             let to_str: &str;
             match &outpath.to_str() {
                 Some(r) => to_str = r,
                 None => {
-                    println!("to_str()_Error");
-                    panic!()
+                   return  Err(io::Error::new(io::ErrorKind::Other,"to_str()_Error"));
                 }
             }
             r_path.push(PathBuf::from(to_str));
@@ -130,23 +105,12 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
                     file.size(),
                     debug_e_time.duration_since(debug_s_time)
                 );
-
-                match stdout().flush() {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("stdout_Err{:?}", e)
-                    }
-                }
+                stdout().flush()?; 
             }
 
             if let Some(p) = outpath.parent() {
                 if !p.exists() {
-                    match fs::create_dir_all(&p) {
-                        Ok(_) => {}
-                        Err(e) => {
-                            println!("fs::create_dir_all_Err{:?}", e)
-                        }
-                    }
+                    fs::create_dir_all(&p)?;
                 }
             }
 
@@ -157,16 +121,15 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
             match some_bf_out.as_deref() {
                 Some(r) => from_memory = r,
                 None => {
-                    println!("file_read_to_end_Buf_Error");
-                    panic!()
+                    return Err(io::Error::new(io::ErrorKind::OutOfMemory, "file_read_to_end_Buf_Error"))
                 }
             }
 
             let im;
             match image::load_from_memory(from_memory) {
                 Err(e) => {
-                    println!("Image_Load_Error{}", e);
-                    panic!()
+                    
+                    return  Err((io::Error::new(io::ErrorKind::Other, e.to_string())));
                 }
                 Ok(r) => im = r,
             }
@@ -176,8 +139,8 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
             let outpath_opt = &outpath.to_str();
             match outpath_opt {
                 None => {
-                    println!("OutPath_toStr_Error");
-                    panic!()
+                    return  Err(io::Error::new(io::ErrorKind::Other, "outpath_opt"));
+                    
                 }
                 Some(r) => outpath_str = r,
             }
@@ -189,12 +152,7 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
         {
             use std::os::unix::fs::PermissionsExt;
             if let Some(mode) = file.unix_mode() {
-                match fs::set_permissions(&outpath, fs::Permissions::from_mode(mode)) {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("UnixError{}", e)
-                    }
-                }
+                fs::set_permissions(&outpath, fs::Permissions::from_mode(mode))?; 
             }
         }
     }
@@ -207,13 +165,13 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> MemoryI
             );
         }
 
-        return MemoryImages {
+        return Ok(MemoryImages {
             input_memory_images: memory_images,
             out_names: r_path,
             print_mode: print_mode,
-        };
+        }) 
     }
-    panic!("Zip Read Error");
+    Err(io::Error::new(io::ErrorKind::NotFound, "images.len zero"))
 }
 
 pub struct MemoryImages {
@@ -223,7 +181,7 @@ pub struct MemoryImages {
 }
 
 impl MemoryImages {
-    pub fn convert_size(&self, as_width: u32, as_height: u32, conv_mode: ConvMode) -> MemoryImages {
+    pub fn convert_size(&self, as_width: u32, as_height: u32, conv_mode: ConvMode) -> Result<MemoryImages,io::Error> {
         let mut conv_images: Vec<DynamicImage> = Vec::new();
         let mut print = false;
 
@@ -276,22 +234,17 @@ impl MemoryImages {
                     debug_e_time.duration_since(debug_s_time)
                 );
             }
-            match stdout().flush() {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("stdout_Err{:?}", e)
-                }
-            }
+            stdout().flush()?;
             im_i += 1;
         }
         if print {
             println!("")
         }
-        return MemoryImages {
+        return Ok(MemoryImages {
             input_memory_images: conv_images,
             out_names: self.out_names.clone(),
             print_mode: self.print_mode.clone(),
-        };
+        });
     }
 
     pub fn create_zip(
@@ -299,16 +252,9 @@ impl MemoryImages {
         outpath: String,
         _save_format: SaveFormat,
         mut quality: u8,
-    ) -> zip::result::ZipResult<()> {
+    ) -> Result<File,io::Error> {
         let path_temp = Path::new(&outpath);
-        let file: File;
-        match File::create(&path_temp) {
-            Ok(r) => file = r,
-            Err(e) => {
-                println!("OutPath_Error{}", e);
-                panic!()
-            }
-        }
+        let file = File::create(&path_temp)?;
         let mut zip = zip::ZipWriter::new(file);
 
         let print;
@@ -338,8 +284,7 @@ impl MemoryImages {
             match self.out_names[count_i].to_str() {
                 Some(r) => start_name = r,
                 None => {
-                    println!("to_str()_Error");
-                    panic!()
+                    return  Err((io::Error::new(io::ErrorKind::Other,"to_str()_Error")));
                 }
             }
 
@@ -423,8 +368,9 @@ impl MemoryImages {
             match self.out_names[count_i].to_str() {
                 Some(r) => to_str = r,
                 None => {
-                    println!("to_str()_Error");
-                    panic!()
+                    return  Err((io::Error::new(io::ErrorKind::Other,"to_str()_Error")));
+              
+                    
                 }
             }
 
@@ -433,21 +379,16 @@ impl MemoryImages {
                 "\rArchive to {}_{:?}",
                 to_str,
                 debug_e_time.duration_since(debug_s_time));
-                match stdout().flush() {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("stdout_Err{:?}", e)
-                    }
-                }
+                stdout().flush()?;
         }
             
             count_i += 1;
         }
-        zip.finish()?;
+       let rd = zip.finish()?;
         if print {
             println!("\nFINSH")
         };
-        Ok(())
+      return   Ok(rd);
     }
 }
 
