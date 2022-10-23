@@ -3,9 +3,9 @@
 //!
 
 use std::ffi::OsStr;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
-use std::io;
 
 use std::fs;
 use std::fs::File;
@@ -35,12 +35,14 @@ pub enum SaveFormat {
     Ref,
 }
 
-pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> Result<MemoryImages, io::Error>{
+pub fn unzip_to_memory(
+    input_path_str: String,
+    print_mode: PrintMode,
+) -> Result<MemoryImages, io::Error> {
     let fname = std::path::Path::new(&input_path_str);
     let file = fs::File::open(&fname)?;
 
-    let mut archive =zip::ZipArchive::new(file)?;
-        
+    let mut archive = zip::ZipArchive::new(file)?;
 
     let mut memory_images: Vec<DynamicImage> = Vec::new();
     let mut r_path = vec![];
@@ -84,12 +86,12 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> Result<
                 print!("\rFile {}/{} ext \"{}\"", i, archive_len, outpath.display());
             }
             fs::create_dir_all(&outpath)?;
-        
+
             let to_str: &str;
             match &outpath.to_str() {
                 Some(r) => to_str = r,
                 None => {
-                   return  Err(io::Error::new(io::ErrorKind::Other,"to_str()_Error"));
+                    return Err(io::Error::new(io::ErrorKind::Other, "to_str()_Error"));
                 }
             }
             r_path.push(PathBuf::from(to_str));
@@ -105,7 +107,7 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> Result<
                     file.size(),
                     debug_e_time.duration_since(debug_s_time)
                 );
-                stdout().flush()?; 
+                stdout().flush()?;
             }
 
             if let Some(p) = outpath.parent() {
@@ -121,15 +123,17 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> Result<
             match some_bf_out.as_deref() {
                 Some(r) => from_memory = r,
                 None => {
-                    return Err(io::Error::new(io::ErrorKind::OutOfMemory, "file_read_to_end_Buf_Error"))
+                    return Err(io::Error::new(
+                        io::ErrorKind::OutOfMemory,
+                        "file_read_to_end_Buf_Error",
+                    ))
                 }
             }
 
             let im;
             match image::load_from_memory(from_memory) {
                 Err(e) => {
-                    
-                    return  Err((io::Error::new(io::ErrorKind::Other, e.to_string())));
+                    return Err((io::Error::new(io::ErrorKind::Other, e.to_string())));
                 }
                 Ok(r) => im = r,
             }
@@ -139,8 +143,7 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> Result<
             let outpath_opt = &outpath.to_str();
             match outpath_opt {
                 None => {
-                    return  Err(io::Error::new(io::ErrorKind::Other, "outpath_opt"));
-                    
+                    return Err(io::Error::new(io::ErrorKind::Other, "outpath_opt"));
                 }
                 Some(r) => outpath_str = r,
             }
@@ -152,7 +155,7 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> Result<
         {
             use std::os::unix::fs::PermissionsExt;
             if let Some(mode) = file.unix_mode() {
-                fs::set_permissions(&outpath, fs::Permissions::from_mode(mode))?; 
+                fs::set_permissions(&outpath, fs::Permissions::from_mode(mode))?;
             }
         }
     }
@@ -169,7 +172,7 @@ pub fn unzip_to_memory(input_path_str: String, print_mode: PrintMode) -> Result<
             input_memory_images: memory_images,
             out_names: r_path,
             print_mode: print_mode,
-        }) 
+        });
     }
     Err(io::Error::new(io::ErrorKind::NotFound, "images.len zero"))
 }
@@ -181,7 +184,12 @@ pub struct MemoryImages {
 }
 
 impl MemoryImages {
-    pub fn convert_size(&self, as_width: u32, as_height: u32, conv_mode: ConvMode) -> Result<MemoryImages,io::Error> {
+    pub fn convert_size(
+        &self,
+        as_width: u32,
+        as_height: u32,
+        conv_mode: ConvMode,
+    ) -> Result<MemoryImages, io::Error> {
         let mut conv_images: Vec<DynamicImage> = Vec::new();
         let mut print = false;
 
@@ -252,7 +260,7 @@ impl MemoryImages {
         outpath: String,
         _save_format: SaveFormat,
         mut quality: u8,
-    ) -> Result<File,io::Error> {
+    ) -> Result<File, io::Error> {
         let path_temp = Path::new(&outpath);
         let file = File::create(&path_temp)?;
         let mut zip = zip::ZipWriter::new(file);
@@ -284,7 +292,7 @@ impl MemoryImages {
             match self.out_names[count_i].to_str() {
                 Some(r) => start_name = r,
                 None => {
-                    return  Err((io::Error::new(io::ErrorKind::Other,"to_str()_Error")));
+                    return Err((io::Error::new(io::ErrorKind::Other, "to_str()_Error")));
                 }
             }
 
@@ -368,27 +376,26 @@ impl MemoryImages {
             match self.out_names[count_i].to_str() {
                 Some(r) => to_str = r,
                 None => {
-                    return  Err((io::Error::new(io::ErrorKind::Other,"to_str()_Error")));
-              
-                    
+                    return Err((io::Error::new(io::ErrorKind::Other, "to_str()_Error")));
                 }
             }
 
-            if print{
-            print!(
-                "\rArchive to {}_{:?}",
-                to_str,
-                debug_e_time.duration_since(debug_s_time));
+            if print {
+                print!(
+                    "\rArchive to {}_{:?}",
+                    to_str,
+                    debug_e_time.duration_since(debug_s_time)
+                );
                 stdout().flush()?;
-        }
-            
+            }
+
             count_i += 1;
         }
-       let rd = zip.finish()?;
+        let rd = zip.finish()?;
         if print {
             println!("\nFINSH")
         };
-      return   Ok(rd);
+        return Ok(rd);
     }
 }
 
