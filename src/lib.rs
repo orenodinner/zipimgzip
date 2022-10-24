@@ -8,7 +8,7 @@
 //! ```rust
 //! fn main() -> Result<(), io::Error> {
 //! let test_path = String::from("C:\\test\\original.zip");
-//! let test_outpath = String::from("C:\\temp\\conv.zip");
+//! let test_outpath = String::from("C:\\test\\conv.zip");
 //! let test_pixels: [u32; 2] = [750, 1334];
 //! let test_quality: u8 = 90;
 //!

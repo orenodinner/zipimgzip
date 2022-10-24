@@ -1,5 +1,28 @@
 
+# zipimgzip
+Resize and ZipArchive the images in the Zip.  
+(Zip -> Image -> ResizeImage -> Zip )
 
+## Example
+Resize the images in the zip file to the specified size and compress them into a zip file
+```rust
+ fn main() -> Result<(), io::Error> {
+ let test_path = String::from("C:\\test\\original.zip");
+ let test_outpath = String::from("C:\\test\\conv.zip");
+ let test_pixels: [u32; 2] = [750, 1334];
+ let test_quality: u8 = 90;
+
+ let _ = unzip_to_memory(test_path, PrintMode::Print)?
+ .convert_size(test_pixels[0], test_pixels[1], ConvMode::Height)?
+ .create_zip(test_outpath, SaveFormat::Ref, test_quality)?;
+ }
+
+ return OK(());
+```
+
+
+## Support
+Jpeg/Jpg/Png
 
 
 
