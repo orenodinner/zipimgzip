@@ -4,9 +4,10 @@
 //! (Zip -> Image -> ResizeImage -> Zip )
 //!
 //! ## Example
+//! Resize the images in the zip file to the specified size and compress them into a zip file
 //! ```rust
 //! fn main() -> Result<(), io::Error> {
-//! let test_path = String::from("C:\\temp\\test.zip");
+//! let test_path = String::from("C:\\test\\original.zip");
 //! let test_outpath = String::from("C:\\temp\\conv.zip");
 //! let test_pixels: [u32; 2] = [750, 1334];
 //! let test_quality: u8 = 90;
@@ -51,6 +52,12 @@ pub enum SaveFormat {
     Ref,
 }
 
+/// Assign the images in the Zip file to MemoryImages.
+/// MemoryImages {
+///     pub input_memory_images: Vec<DynamicImage>,
+///     pub out_names: Vec<PathBuf>,
+///     pub print_mode: PrintMode,
+/// }
 pub fn unzip_to_memory(
     input_path_str: String,
     print_mode: PrintMode,
@@ -85,10 +92,7 @@ pub fn unzip_to_memory(
                 outpath = PathBuf::from(a);
             }
         }
-        /*  let outpath = match file.name_raw() {
-            Some(path) => path.to_owned(),
-            None => continue,
-        };*/
+     
 
         {
             let comment = file.comment();
@@ -200,6 +204,8 @@ pub struct MemoryImages {
 }
 
 impl MemoryImages {
+/// MemoryImage is resized to the specified size.
+/// Resizes a MemoryImage to the specified size; the aspect ratio is maintained by conv_mode.
     pub fn convert_size(
         &self,
         as_width: u32,
@@ -271,6 +277,8 @@ impl MemoryImages {
         });
     }
 
+///Converts MemoryImage to the specified image format and Zip compresses it.
+///quality is a jpg parameter.
     pub fn create_zip(
         &mut self,
         outpath: String,
