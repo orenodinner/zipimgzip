@@ -6,7 +6,7 @@
 //! ## Example
 //! Resize the images in the zip file to the specified size and compress them into a zip file
 //! ```rust
-//! fn main() -> Result<(), io::Error> {
+//! fn main() -> Result<(), std::io::Error> {
 //! let test_path = String::from("C:\\test\\original.zip");
 //! let test_outpath = String::from("C:\\test\\conv.zip");
 //! let test_pixels: [u32; 2] = [750, 1334];
