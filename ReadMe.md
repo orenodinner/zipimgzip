@@ -15,9 +15,9 @@ Resize the images in the zip file to the specified size and compress them into a
  let _ = unzip_to_memory(test_path, PrintMode::Print)?
  .convert_size(test_pixels[0], test_pixels[1], ConvMode::Height)?
  .create_zip(test_outpath, SaveFormat::Ref, test_quality)?;
+ 
+ return Ok(());
  }
-
- return OK(());
 ```
 
 
