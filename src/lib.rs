@@ -18,7 +18,7 @@
 //! return Ok(());
 //! }
 //!
-//! 
+//!
 //! ```
 
 use std::ffi::OsStr;
@@ -29,11 +29,16 @@ use std::path::PathBuf;
 use std::fs;
 use std::fs::File;
 use std::io::{stdout, Read, Write};
+use std::vec;
 
 use encoding_rs;
 use image::imageops::FilterType;
 use image::DynamicImage;
 use image::ImageEncoder;
+use zip::read::ZipFile;
+use std::thread;
+use std::sync::{Mutex, Arc,mpsc};
+
 
 #[derive(Clone)]
 pub enum PrintMode {
@@ -41,6 +46,7 @@ pub enum PrintMode {
     Unprint,
 }
 
+#[derive(Clone)]
 pub enum ConvMode {
     Width,
     Height,
@@ -93,7 +99,6 @@ pub fn unzip_to_memory(
                 outpath = PathBuf::from(a);
             }
         }
-     
 
         {
             let comment = file.comment();
@@ -205,8 +210,8 @@ pub struct MemoryImages {
 }
 
 impl MemoryImages {
-/// MemoryImage is resized to the specified size.
-/// Resizes a MemoryImage to the specified size; the aspect ratio is maintained by conv_mode.
+    /// MemoryImage is resized to the specified size.
+    /// Resizes a MemoryImage to the specified size; the aspect ratio is maintained by conv_mode.
     pub fn convert_size(
         &self,
         as_width: u32,
@@ -278,8 +283,8 @@ impl MemoryImages {
         });
     }
 
-///Converts MemoryImage to the specified image format and Zip compresses it.
-///quality is a jpg parameter.
+    ///Converts MemoryImage to the specified image format and Zip compresses it.
+    ///quality is a jpg parameter.
     pub fn create_zip(
         &mut self,
         outpath: String,
@@ -422,6 +427,70 @@ impl MemoryImages {
         };
         return Ok(zip_file);
     }
+
+    ///multiprocess
+    /// 
+    pub fn convert_size_multiprocess(
+        &self,
+        as_width: u32,
+        as_height: u32,
+        conv_mode: ConvMode,
+    ) -> Result<MemoryImages, io::Error> {
+
+        let mut conv_images: Vec<DynamicImage> = Vec::new();
+        let mut conv_outpath = vec![];
+        let mut print = false;
+        let mut handles = vec![];
+
+      
+        match self.print_mode {
+            PrintMode::Print => {
+                print = true;
+            }
+            PrintMode::Unprint => {
+                print = false;
+            }
+        }
+        if print {
+            println!("");
+        }
+
+        let mut im_i = 0;
+        let debug_s_time = std::time::Instant::now();
+        let conv_num;
+        match conv_mode {
+            ConvMode::Height => {conv_num =1;},
+            ConvMode::Width => {conv_num =2;},
+            ConvMode::Both => {conv_num =3;}
+        }
+
+        for im_o in &self.input_memory_images {
+            let im = im_o.clone();
+            let out_path = self.out_names[im_i].clone();
+        
+         let  handle =thread::spawn(move||do_convert_image_multiprocess(im, as_width, as_height,out_path,conv_num));
+         handles.push(handle); 
+         im_i +=1;
+        }
+
+        for h in handles{
+         let  (im_conv ,_outpath) = h.join().unwrap();
+         conv_images.push(im_conv);
+         conv_outpath.push(_outpath);
+
+        }
+
+        if print {
+            println!("")
+        }
+        return Ok(MemoryImages {
+            input_memory_images: conv_images,
+            out_names: conv_outpath,
+            print_mode: self.print_mode.clone(),
+        });
+
+    }
+
 }
 
 fn shift_jis_encode(input: &[u8]) -> String {
@@ -429,3 +498,50 @@ fn shift_jis_encode(input: &[u8]) -> String {
     let a = res.into_owned();
     return a;
 }
+
+fn do_convert_image_multiprocess(im:DynamicImage,as_width:u32,as_height:u32,out_path:PathBuf,conv_num:i32)-> (DynamicImage,PathBuf){
+
+    let mut conv_width = as_width.clone();
+    let mut conv_height = as_height.clone();
+
+    match conv_num {
+        1 => {
+            let w_p: f32 = as_height as f32 / im.height() as f32;
+            conv_width = ((im.width() as f32) * &w_p) as u32;
+        }
+        2 => {
+            let h_p: f32 = as_width as f32 / im.width() as f32;
+            conv_height = (im.height() as f32 * &h_p) as u32;
+        }
+        3 => {
+            let w_p: f32 = as_height as f32 / im.height() as f32;
+            conv_width = ((im.width() as f32) * &w_p) as u32;
+            if conv_width > as_width {
+                let h_p: f32 = as_width as f32 / im.width() as f32;
+                conv_height = (im.height() as f32 * &h_p) as u32;
+            }
+        }
+        _ =>  {
+            let w_p: f32 = as_height as f32 / im.height() as f32;
+            conv_width = ((im.width() as f32) * &w_p) as u32;
+        }
+    }
+       
+            let w_p: f32 = as_height as f32 / im.height() as f32;
+            conv_width = ((im.width() as f32) * &w_p) as u32;
+    
+    let conv_im = im.resize(conv_width, conv_height, FilterType::CatmullRom);
+    
+    let debug_e_time = std::time::Instant::now();
+
+    
+        print!(
+            "\rimage conv{:?}",out_path);
+    
+    
+    
+    return (conv_im,out_path);
+
+}
+
+
