@@ -8,16 +8,14 @@ use zipimgzip::PrintMode;
 use zipimgzip::SaveFormat;
 
 fn main() -> Result<(), io::Error> {
+    //m2ultiprocess();
+    //  single();
+    multiprocess();
 
-//m2ultiprocess();
- //  single();
-   multiprocess();
- 
     return Ok(());
 }
 
-
-fn single()-> Result<(),io::Error>{
+fn single() -> Result<(), io::Error> {
     let test_pixels: [u32; 2] = [750, 1334];
     let test_quality: u8 = 90;
     let test_path = String::from("C:\\temp\\www.zip");
@@ -32,16 +30,16 @@ fn single()-> Result<(),io::Error>{
         "single_time_{:?}",
         debug_e_time.duration_since(debug_s_time)
     );
-Ok(())
+    Ok(())
 }
 
-fn m2ultiprocess()-> Result<(),io::Error>{
+fn m2ultiprocess() -> Result<(), io::Error> {
     let test_pixels: [u32; 2] = [750, 1334];
     let test_quality: u8 = 90;
     let test_path = String::from("C:\\temp\\www.zip");
     let test_outpath = String::from("C:\\temp\\convww.zip");
     let debug_s_time = std::time::Instant::now();
-    
+
     let _ = unzip_to_memory(test_path, PrintMode::Print)?
         .convert_size_multiprocess(test_pixels[0], test_pixels[1], ConvMode::Height)?
         .create_zip_multiprocess(test_outpath, SaveFormat::Ref, test_quality)?;
@@ -52,25 +50,22 @@ fn m2ultiprocess()-> Result<(),io::Error>{
     );
     Ok(())
 }
-fn multiprocess()-> Result<(),io::Error>{
+fn multiprocess() -> Result<(), io::Error> {
     let test_pixels: [u32; 2] = [750, 1334];
     let test_quality: u8 = 90;
     let test_path = String::from("C:\\temp\\www.zip");
     let test_outpath = String::from("C:\\temp\\convww.zip");
     let debug_s_time = std::time::Instant::now();
- 
+
     let _ = unzip_to_memory(test_path, PrintMode::Print)?
         .convert_size_multiprocess(test_pixels[0], test_pixels[1], ConvMode::Height)?
         .create_zip(test_outpath, SaveFormat::Ref, test_quality)?;
     let debug_e_time = std::time::Instant::now();
-   
-    
+
     println!(
         "2multiprocess_time_{:?}",
         debug_e_time.duration_since(debug_s_time)
     );
 
-Ok(())
-  
-
+    Ok(())
 }
