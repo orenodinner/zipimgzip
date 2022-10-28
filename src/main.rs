@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-use walkdir::{DirEntry, WalkDir};
 use zipimgzip::unzip_to_memory;
 use zipimgzip::ConvMode;
 

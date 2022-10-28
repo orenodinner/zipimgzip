@@ -29,16 +29,15 @@ use std::path::PathBuf;
 use std::fs;
 use std::fs::File;
 use std::io::{stdout, Read, Write};
-use std::str::FromStr;
+
 use std::vec;
 
 use encoding_rs;
 use image::imageops::FilterType;
 use image::DynamicImage;
 use image::ImageEncoder;
-use std::sync::{mpsc, Arc, Mutex};
+
 use std::thread;
-use zip::read::ZipFile;
 
 #[derive(Clone)]
 pub enum PrintMode {
@@ -454,7 +453,7 @@ impl MemoryImages {
         }
 
         let mut im_i = 0;
-        let debug_s_time = std::time::Instant::now();
+
         let conv_num;
         match conv_mode {
             ConvMode::Height => {
@@ -521,14 +520,13 @@ impl MemoryImages {
             zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
         let mut _i = 0;
-        let mut count_i = 0;
+
         if quality > 100 {
             quality = 100
         };
         let mut bit_handles = vec![];
 
         for im_o in &self.input_memory_images {
-            let debug_s_time = std::time::Instant::now();
             let im = im_o.clone();
             let out_names = self.out_names.clone();
             let bit_handle = thread::spawn(move || {
@@ -600,8 +598,6 @@ fn do_convert_image_multiprocess(
     conv_width = ((im.width() as f32) * &w_p) as u32;
 
     let conv_im = im.resize(conv_width, conv_height, FilterType::CatmullRom);
-
-    let debug_e_time = std::time::Instant::now();
 
     print!("\rimage conv{:?}", out_path);
 
