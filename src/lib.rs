@@ -29,6 +29,7 @@ use std::path::PathBuf;
 use std::fs;
 use std::fs::File;
 use std::io::{stdout, Read, Write};
+use std::str::FromStr;
 use std::vec;
 
 use encoding_rs;
@@ -493,6 +494,67 @@ impl MemoryImages {
             print_mode: self.print_mode.clone(),
         });
     }
+
+    pub fn create_zip_multiprocess(
+        &mut self,
+        outpath: String,
+        _save_format: SaveFormat,
+        mut quality: u8,
+    ) -> Result<File, io::Error> {
+        let path_temp = Path::new(&outpath);
+        let file = File::create(&path_temp)?;
+        let mut zip = zip::ZipWriter::new(file);
+        let mut vec_w = vec![];
+        let mut vec_startname = vec![];
+
+        let print;
+        match self.print_mode {
+            PrintMode::Print => {
+                print = true;
+            }
+            PrintMode::Unprint => {
+                print = false;
+            }
+        }
+
+        let options =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+
+        let mut _i = 0;
+        let mut count_i = 0;
+        if quality > 100 {
+            quality = 100
+        };
+        let mut bit_handles = vec![];
+
+        for im_o in &self.input_memory_images {
+            let debug_s_time = std::time::Instant::now();
+            let im = im_o.clone();
+            let out_names = self.out_names.clone();
+            let bit_handle = thread::spawn(move || {
+                do_create_imgtobit_multithread(_i, im, out_names, SaveFormat::Jpeg, quality.clone())
+            });
+            bit_handles.push(bit_handle);
+            _i += 1;
+        }
+        for h in bit_handles {
+            let (h_im, h_outpath) = h.join().unwrap();
+            vec_w.push(h_im);
+            vec_startname.push(h_outpath);
+        }
+
+        let mut i = 0;
+        for r in vec_w {
+            let _ = zip.start_file(vec_startname[i].clone(), options);
+            let _ = zip.write_all(&*r);
+            i += 1;
+        }
+        let zip_file = zip.finish()?;
+        if print {
+            println!("\nFINSH")
+        };
+        return Ok(zip_file);
+    }
 }
 
 fn shift_jis_encode(input: &[u8]) -> String {
@@ -544,4 +606,76 @@ fn do_convert_image_multiprocess(
     print!("\rimage conv{:?}", out_path);
 
     return (conv_im, out_path);
+}
+
+fn do_create_imgtobit_multithread(
+    i: usize,
+    im: DynamicImage,
+    out_names: Vec<PathBuf>,
+    _save_format: SaveFormat,
+    quality: u8,
+) -> (Vec<u8>, String) {
+    let res_start_name;
+    let mut w = vec![];
+    match out_names[i].to_str() {
+        Some(r) => res_start_name = r,
+        None => {
+            println!("to_str()_Error");
+            panic!();
+        }
+    }
+
+    let _os_str_jpg = OsStr::new("jpg");
+    let _os_str_jpeg = OsStr::new("jpeg");
+    let _os_str_png = OsStr::new("png");
+
+    match _save_format {
+        SaveFormat::Jpeg => {
+            let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
+                .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+        }
+        SaveFormat::Png => {
+            let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
+                im.as_bytes(),
+                im.width(),
+                im.height(),
+                im.color(),
+            );
+        }
+
+        SaveFormat::Ref => match out_names[i].extension() {
+            None => {}
+            Some(r) => match r {
+                _os_str_jpg => {
+                    let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
+                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                }
+                _os_str_jpeg => {
+                    let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
+                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                }
+                _os_str_png => {
+                    let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
+                        im.as_bytes(),
+                        im.width(),
+                        im.height(),
+                        im.color(),
+                    );
+                }
+
+                _ => {
+                    let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
+                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                }
+            },
+        },
+
+        _ => {
+            let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
+                .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+        }
+    }
+    let r = (&*w).to_vec();
+    let p = res_start_name.to_string();
+    return (r, p);
 }
