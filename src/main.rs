@@ -6,9 +6,9 @@ use zipimgzip::PrintMode;
 use zipimgzip::SaveFormat;
 
 fn main() -> Result<(), io::Error> {
-    //m2ultiprocess();
-    //  single();
-    multiprocess();
+    m2ultiprocess()?;
+    single()?;
+    multiprocess()?;
 
     return Ok(());
 }
@@ -43,7 +43,7 @@ fn m2ultiprocess() -> Result<(), io::Error> {
         .create_zip_multiprocess(test_outpath, SaveFormat::Ref, test_quality)?;
     let debug_e_time = std::time::Instant::now();
     println!(
-        "multiprocess_time_{:?}",
+        "m2ultiprocess_time_{:?}",
         debug_e_time.duration_since(debug_s_time)
     );
     Ok(())
@@ -61,7 +61,7 @@ fn multiprocess() -> Result<(), io::Error> {
     let debug_e_time = std::time::Instant::now();
 
     println!(
-        "2multiprocess_time_{:?}",
+        "multiprocess_time_{:?}",
         debug_e_time.duration_since(debug_s_time)
     );
 
