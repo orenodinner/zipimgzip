@@ -218,7 +218,7 @@ impl MemoryImages {
         conv_mode: ConvMode,
     ) -> Result<MemoryImages, io::Error> {
         let mut conv_images: Vec<DynamicImage> = Vec::new();
-        let mut print = false;
+        let print;
 
         let mut conv_width = as_width.clone();
         let mut conv_height = as_height.clone();
@@ -349,7 +349,7 @@ impl MemoryImages {
                 SaveFormat::Ref => match self.out_names[count_i].extension() {
                     None => {}
                     Some(r) => match r {
-                        _os_str_jpg => {
+                        r if r == _os_str_jpg => {
                             let _ =
                                 image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                                     .write_image(
@@ -359,7 +359,7 @@ impl MemoryImages {
                                         im.color(),
                                     );
                         }
-                        _os_str_jpeg => {
+                        r if r == _os_str_jpeg => {
                             let _ =
                                 image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                                     .write_image(
@@ -369,7 +369,7 @@ impl MemoryImages {
                                         im.color(),
                                     );
                         }
-                        _os_str_png => {
+                        r if r == _os_str_png => {
                             let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
                                 im.as_bytes(),
                                 im.width(),
@@ -390,11 +390,6 @@ impl MemoryImages {
                         }
                     },
                 },
-
-                _ => {
-                    let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
-                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
-                }
             }
 
             let _ = zip.write_all(&*w);
@@ -437,7 +432,7 @@ impl MemoryImages {
     ) -> Result<MemoryImages, io::Error> {
         let mut conv_images: Vec<DynamicImage> = Vec::new();
         let mut conv_outpath = vec![];
-        let mut print = false;
+        let print;
         let mut handles = vec![];
 
         match self.print_mode {
@@ -594,9 +589,6 @@ fn do_convert_image_multiprocess(
         }
     }
 
-    let w_p: f32 = as_height as f32 / im.height() as f32;
-    conv_width = ((im.width() as f32) * &w_p) as u32;
-
     let conv_im = im.resize(conv_width, conv_height, FilterType::CatmullRom);
 
     print!("\rimage conv{:?}", out_path);
@@ -642,15 +634,15 @@ fn do_create_imgtobit_multithread(
         SaveFormat::Ref => match out_names[i].extension() {
             None => {}
             Some(r) => match r {
-                _os_str_jpg => {
+                r if r == _os_str_jpg => {
                     let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                         .write_image(im.as_bytes(), im.width(), im.height(), im.color());
                 }
-                _os_str_jpeg => {
+                r if r == _os_str_jpeg => {
                     let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                         .write_image(im.as_bytes(), im.width(), im.height(), im.color());
                 }
-                _os_str_png => {
+                r if r == _os_str_png => {
                     let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
                         im.as_bytes(),
                         im.width(),
@@ -665,11 +657,6 @@ fn do_create_imgtobit_multithread(
                 }
             },
         },
-
-        _ => {
-            let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
-                .write_image(im.as_bytes(), im.width(), im.height(), im.color());
-        }
     }
     let r = (&*w).to_vec();
     let p = res_start_name.to_string();
