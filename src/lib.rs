@@ -465,9 +465,12 @@ impl MemoryImages {
         for im_o in &self.input_memory_images {
             let im = im_o.clone();
             let out_path = self.out_names[im_i].clone();
+            let print_mode = self.print_mode.clone();
 
             let handle = thread::spawn(move || {
-                do_convert_image_multithread(im, as_width, as_height, out_path, conv_num)
+                do_convert_image_multithread(
+                    im, as_width, as_height, out_path, conv_num, print_mode,
+                )
             });
             handles.push(handle);
             im_i += 1;
@@ -562,9 +565,19 @@ fn do_convert_image_multithread(
     as_height: u32,
     out_path: PathBuf,
     conv_num: i32,
+    print_mode: PrintMode,
 ) -> (DynamicImage, PathBuf) {
     let mut conv_width = as_width.clone();
     let mut conv_height = as_height.clone();
+    let print;
+    match print_mode {
+        PrintMode::Print => {
+            print = true;
+        }
+        PrintMode::Unprint => {
+            print = false;
+        }
+    }
 
     match conv_num {
         1 => {
@@ -591,7 +604,9 @@ fn do_convert_image_multithread(
 
     let conv_im = im.resize(conv_width, conv_height, FilterType::CatmullRom);
 
-    print!("\rimage conv{:?}", out_path);
+    if print {
+        print!("\rimage conv{:?}", out_path);
+    }
 
     return (conv_im, out_path);
 }
