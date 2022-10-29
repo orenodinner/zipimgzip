@@ -24,8 +24,8 @@ Resize the images in the zip file to the specified size and compress them into a
  fn main() -> Result<(), io::Error> {
  let test_pixels: [u32; 2] = [750, 1334];
  let test_quality: u8 = 90;
- let test_path = String::from("C:\\temp\\www.zip");
- let test_outpath = String::from("C:\\temp\\convww.zip");
+ let test_path = String::from("C:\\test\\test.zip");
+ let test_outpath = String::from("C:\\test\\conv.zip");
 
  let _ = unzip_to_memory(test_path, PrintMode::Print)?
      .convert_size_multithread(test_pixels[0], test_pixels[1], ConvMode::Height)?
