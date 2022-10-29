@@ -13,13 +13,27 @@
 //! let test_quality: u8 = 90;
 //!
 //! let _ = unzip_to_memory(test_path, PrintMode::Print)?
-//! .convert_size(test_pixels[0], test_pixels[1], ConvMode::Height)?
-//! .create_zip(test_outpath, SaveFormat::Ref, test_quality)?;
+//!     .convert_size(test_pixels[0], test_pixels[1], ConvMode::Height)?
+//!     .create_zip(test_outpath, SaveFormat::Ref, test_quality)?;
 //! return Ok(());
 //! }
 //!
-//! 
 //! ```
+//! ### MultiThread exmanple
+//! ```rust
+//! fn main() -> Result<(), io::Error> {
+//! let test_pixels: [u32; 2] = [750, 1334];
+//! let test_quality: u8 = 90;
+//! let test_path = String::from("C:\\temp\\www.zip");
+//! let test_outpath = String::from("C:\\temp\\convww.zip");
+//!
+//! let _ = unzip_to_memory(test_path, PrintMode::Print)?
+//!     .convert_size_multithread(test_pixels[0], test_pixels[1], ConvMode::Height)?
+//!     .create_zip_multithread(test_outpath, SaveFormat::Ref, test_quality)?;
+//!
+//! Ok(())
+//! }
+//!```
 
 use std::ffi::OsStr;
 use std::io;
@@ -30,10 +44,14 @@ use std::fs;
 use std::fs::File;
 use std::io::{stdout, Read, Write};
 
+use std::vec;
+
 use encoding_rs;
 use image::imageops::FilterType;
 use image::DynamicImage;
 use image::ImageEncoder;
+
+use std::thread;
 
 #[derive(Clone)]
 pub enum PrintMode {
@@ -41,6 +59,7 @@ pub enum PrintMode {
     Unprint,
 }
 
+#[derive(Clone)]
 pub enum ConvMode {
     Width,
     Height,
@@ -93,7 +112,6 @@ pub fn unzip_to_memory(
                 outpath = PathBuf::from(a);
             }
         }
-     
 
         {
             let comment = file.comment();
@@ -205,8 +223,8 @@ pub struct MemoryImages {
 }
 
 impl MemoryImages {
-/// MemoryImage is resized to the specified size.
-/// Resizes a MemoryImage to the specified size; the aspect ratio is maintained by conv_mode.
+    /// MemoryImage is resized to the specified size.
+    /// Resizes a MemoryImage to the specified size; the aspect ratio is maintained by conv_mode.
     pub fn convert_size(
         &self,
         as_width: u32,
@@ -214,7 +232,7 @@ impl MemoryImages {
         conv_mode: ConvMode,
     ) -> Result<MemoryImages, io::Error> {
         let mut conv_images: Vec<DynamicImage> = Vec::new();
-        let mut print = false;
+        let print;
 
         let mut conv_width = as_width.clone();
         let mut conv_height = as_height.clone();
@@ -278,8 +296,8 @@ impl MemoryImages {
         });
     }
 
-///Converts MemoryImage to the specified image format and Zip compresses it.
-///quality is a jpg parameter.
+    ///Converts MemoryImage to the specified image format and Zip compresses it.
+    ///quality is a jpg parameter.
     pub fn create_zip(
         &mut self,
         outpath: String,
@@ -345,7 +363,7 @@ impl MemoryImages {
                 SaveFormat::Ref => match self.out_names[count_i].extension() {
                     None => {}
                     Some(r) => match r {
-                        _os_str_jpg => {
+                        r if r == _os_str_jpg => {
                             let _ =
                                 image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                                     .write_image(
@@ -355,7 +373,7 @@ impl MemoryImages {
                                         im.color(),
                                     );
                         }
-                        _os_str_jpeg => {
+                        r if r == _os_str_jpeg => {
                             let _ =
                                 image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                                     .write_image(
@@ -365,7 +383,7 @@ impl MemoryImages {
                                         im.color(),
                                     );
                         }
-                        _os_str_png => {
+                        r if r == _os_str_png => {
                             let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
                                 im.as_bytes(),
                                 im.width(),
@@ -386,11 +404,6 @@ impl MemoryImages {
                         }
                     },
                 },
-
-                _ => {
-                    let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
-                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
-                }
             }
 
             let _ = zip.write_all(&*w);
@@ -422,10 +435,263 @@ impl MemoryImages {
         };
         return Ok(zip_file);
     }
+
+    /// MultiThread
+    /// MemoryImage is resized to the specified size.
+    /// Resizes a MemoryImage to the specified size; the aspect ratio is maintained by conv_mode.
+    pub fn convert_size_multithread(
+        &self,
+        as_width: u32,
+        as_height: u32,
+        conv_mode: ConvMode,
+    ) -> Result<MemoryImages, io::Error> {
+        let mut conv_images: Vec<DynamicImage> = Vec::new();
+        let mut conv_outpath = vec![];
+        let print;
+        let mut handles = vec![];
+
+        match self.print_mode {
+            PrintMode::Print => {
+                print = true;
+            }
+            PrintMode::Unprint => {
+                print = false;
+            }
+        }
+        if print {
+            println!("");
+        }
+
+        let mut im_i = 0;
+
+        let conv_num;
+        match conv_mode {
+            ConvMode::Height => {
+                conv_num = 1;
+            }
+            ConvMode::Width => {
+                conv_num = 2;
+            }
+            ConvMode::Both => {
+                conv_num = 3;
+            }
+        }
+
+        for im_o in &self.input_memory_images {
+            let im = im_o.clone();
+            let out_path = self.out_names[im_i].clone();
+            let print_mode = self.print_mode.clone();
+
+            let handle = thread::spawn(move || {
+                do_convert_image_multithread(
+                    im, as_width, as_height, out_path, conv_num, print_mode,
+                )
+            });
+            handles.push(handle);
+            im_i += 1;
+        }
+
+        for h in handles {
+            let (im_conv, _outpath) = h.join().unwrap();
+            conv_images.push(im_conv);
+            conv_outpath.push(_outpath);
+        }
+
+        if print {
+            println!("")
+        }
+        return Ok(MemoryImages {
+            input_memory_images: conv_images,
+            out_names: conv_outpath,
+            print_mode: self.print_mode.clone(),
+        });
+    }
+
+    ///MultiThread
+    ///Converts MemoryImage to the specified image format and Zip compresses it.
+    ///quality is a jpg parameter.
+    pub fn create_zip_multithread(
+        &mut self,
+        outpath: String,
+        _save_format: SaveFormat,
+        mut quality: u8,
+    ) -> Result<File, io::Error> {
+        let path_temp = Path::new(&outpath);
+        let file = File::create(&path_temp)?;
+        let mut zip = zip::ZipWriter::new(file);
+        let mut vec_w = vec![];
+        let mut vec_startname = vec![];
+
+        let print;
+        match self.print_mode {
+            PrintMode::Print => {
+                print = true;
+            }
+            PrintMode::Unprint => {
+                print = false;
+            }
+        }
+
+        let options =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+
+        let mut _i = 0;
+
+        if quality > 100 {
+            quality = 100
+        };
+        let mut bit_handles = vec![];
+
+        for im_o in &self.input_memory_images {
+            let im = im_o.clone();
+            let out_names = self.out_names.clone();
+            let bit_handle = thread::spawn(move || {
+                do_create_imgtobit_multithread(_i, im, out_names, SaveFormat::Jpeg, quality.clone())
+            });
+            bit_handles.push(bit_handle);
+            _i += 1;
+        }
+        for h in bit_handles {
+            let (h_im, h_outpath) = h.join().unwrap();
+            vec_w.push(h_im);
+            vec_startname.push(h_outpath);
+        }
+
+        let mut i = 0;
+        for r in vec_w {
+            let _ = zip.start_file(vec_startname[i].clone(), options);
+            let _ = zip.write_all(&*r);
+            i += 1;
+        }
+        let zip_file = zip.finish()?;
+        if print {
+            println!("\nFINSH")
+        };
+        return Ok(zip_file);
+    }
 }
 
 fn shift_jis_encode(input: &[u8]) -> String {
     let (res, _, _) = encoding_rs::SHIFT_JIS.decode(input);
     let a = res.into_owned();
     return a;
+}
+
+fn do_convert_image_multithread(
+    im: DynamicImage,
+    as_width: u32,
+    as_height: u32,
+    out_path: PathBuf,
+    conv_num: i32,
+    print_mode: PrintMode,
+) -> (DynamicImage, PathBuf) {
+    let mut conv_width = as_width.clone();
+    let mut conv_height = as_height.clone();
+    let print;
+    match print_mode {
+        PrintMode::Print => {
+            print = true;
+        }
+        PrintMode::Unprint => {
+            print = false;
+        }
+    }
+
+    match conv_num {
+        1 => {
+            let w_p: f32 = as_height as f32 / im.height() as f32;
+            conv_width = ((im.width() as f32) * &w_p) as u32;
+        }
+        2 => {
+            let h_p: f32 = as_width as f32 / im.width() as f32;
+            conv_height = (im.height() as f32 * &h_p) as u32;
+        }
+        3 => {
+            let w_p: f32 = as_height as f32 / im.height() as f32;
+            conv_width = ((im.width() as f32) * &w_p) as u32;
+            if conv_width > as_width {
+                let h_p: f32 = as_width as f32 / im.width() as f32;
+                conv_height = (im.height() as f32 * &h_p) as u32;
+            }
+        }
+        _ => {
+            let w_p: f32 = as_height as f32 / im.height() as f32;
+            conv_width = ((im.width() as f32) * &w_p) as u32;
+        }
+    }
+
+    let conv_im = im.resize(conv_width, conv_height, FilterType::CatmullRom);
+
+    if print {
+        print!("\rimage conv{:?}", out_path);
+    }
+
+    return (conv_im, out_path);
+}
+
+fn do_create_imgtobit_multithread(
+    i: usize,
+    im: DynamicImage,
+    out_names: Vec<PathBuf>,
+    _save_format: SaveFormat,
+    quality: u8,
+) -> (Vec<u8>, String) {
+    let res_start_name;
+    let mut w = vec![];
+    match out_names[i].to_str() {
+        Some(r) => res_start_name = r,
+        None => {
+            println!("to_str()_Error");
+            panic!();
+        }
+    }
+
+    let _os_str_jpg = OsStr::new("jpg");
+    let _os_str_jpeg = OsStr::new("jpeg");
+    let _os_str_png = OsStr::new("png");
+
+    match _save_format {
+        SaveFormat::Jpeg => {
+            let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
+                .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+        }
+        SaveFormat::Png => {
+            let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
+                im.as_bytes(),
+                im.width(),
+                im.height(),
+                im.color(),
+            );
+        }
+
+        SaveFormat::Ref => match out_names[i].extension() {
+            None => {}
+            Some(r) => match r {
+                r if r == _os_str_jpg => {
+                    let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
+                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                }
+                r if r == _os_str_jpeg => {
+                    let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
+                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                }
+                r if r == _os_str_png => {
+                    let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
+                        im.as_bytes(),
+                        im.width(),
+                        im.height(),
+                        im.color(),
+                    );
+                }
+
+                _ => {
+                    let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
+                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                }
+            },
+        },
+    }
+    let r = (&*w).to_vec();
+    let p = res_start_name.to_string();
+    return (r, p);
 }
