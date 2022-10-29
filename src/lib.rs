@@ -13,13 +13,27 @@
 //! let test_quality: u8 = 90;
 //!
 //! let _ = unzip_to_memory(test_path, PrintMode::Print)?
-//! .convert_size(test_pixels[0], test_pixels[1], ConvMode::Height)?
-//! .create_zip(test_outpath, SaveFormat::Ref, test_quality)?;
+//!     .convert_size(test_pixels[0], test_pixels[1], ConvMode::Height)?
+//!     .create_zip(test_outpath, SaveFormat::Ref, test_quality)?;
 //! return Ok(());
 //! }
 //!
-//!
 //! ```
+//! ### MultiThread exmanple
+//! ```rust
+//! fn main() -> Result<(), io::Error> {
+//! let test_pixels: [u32; 2] = [750, 1334];
+//! let test_quality: u8 = 90;
+//! let test_path = String::from("C:\\temp\\www.zip");
+//! let test_outpath = String::from("C:\\temp\\convww.zip");
+//!
+//! let _ = unzip_to_memory(test_path, PrintMode::Print)?
+//!     .convert_size_multithread(test_pixels[0], test_pixels[1], ConvMode::Height)?
+//!     .create_zip_multithread(test_outpath, SaveFormat::Ref, test_quality)?;
+//!
+//! Ok(())
+//! }
+//!```
 
 use std::ffi::OsStr;
 use std::io;
@@ -422,8 +436,9 @@ impl MemoryImages {
         return Ok(zip_file);
     }
 
-    ///multiprocess
-    ///
+    /// MultiThread
+    /// MemoryImage is resized to the specified size.
+    /// Resizes a MemoryImage to the specified size; the aspect ratio is maintained by conv_mode.
     pub fn convert_size_multithread(
         &self,
         as_width: u32,
@@ -492,6 +507,9 @@ impl MemoryImages {
         });
     }
 
+    ///MultiThread
+    ///Converts MemoryImage to the specified image format and Zip compresses it.
+    ///quality is a jpg parameter.
     pub fn create_zip_multithread(
         &mut self,
         outpath: String,
