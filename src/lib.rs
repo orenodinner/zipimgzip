@@ -424,7 +424,7 @@ impl MemoryImages {
 
     ///multiprocess
     ///
-    pub fn convert_size_multiprocess(
+    pub fn convert_size_multithread(
         &self,
         as_width: u32,
         as_height: u32,
@@ -467,7 +467,7 @@ impl MemoryImages {
             let out_path = self.out_names[im_i].clone();
 
             let handle = thread::spawn(move || {
-                do_convert_image_multiprocess(im, as_width, as_height, out_path, conv_num)
+                do_convert_image_multithread(im, as_width, as_height, out_path, conv_num)
             });
             handles.push(handle);
             im_i += 1;
@@ -489,7 +489,7 @@ impl MemoryImages {
         });
     }
 
-    pub fn create_zip_multiprocess(
+    pub fn create_zip_multithread(
         &mut self,
         outpath: String,
         _save_format: SaveFormat,
@@ -556,7 +556,7 @@ fn shift_jis_encode(input: &[u8]) -> String {
     return a;
 }
 
-fn do_convert_image_multiprocess(
+fn do_convert_image_multithread(
     im: DynamicImage,
     as_width: u32,
     as_height: u32,

@@ -39,11 +39,11 @@ fn m2ultiprocess() -> Result<(), io::Error> {
     let debug_s_time = std::time::Instant::now();
 
     let _ = unzip_to_memory(test_path, PrintMode::Print)?
-        .convert_size_multiprocess(test_pixels[0], test_pixels[1], ConvMode::Height)?
-        .create_zip_multiprocess(test_outpath, SaveFormat::Ref, test_quality)?;
+        .convert_size_multithread(test_pixels[0], test_pixels[1], ConvMode::Height)?
+        .create_zip_multithread(test_outpath, SaveFormat::Ref, test_quality)?;
     let debug_e_time = std::time::Instant::now();
     println!(
-        "m2ultiprocess_time_{:?}",
+        "m2ultithread_time_{:?}",
         debug_e_time.duration_since(debug_s_time)
     );
     Ok(())
@@ -56,12 +56,12 @@ fn multiprocess() -> Result<(), io::Error> {
     let debug_s_time = std::time::Instant::now();
 
     let _ = unzip_to_memory(test_path, PrintMode::Print)?
-        .convert_size_multiprocess(test_pixels[0], test_pixels[1], ConvMode::Height)?
+        .convert_size_multithread(test_pixels[0], test_pixels[1], ConvMode::Height)?
         .create_zip(test_outpath, SaveFormat::Ref, test_quality)?;
     let debug_e_time = std::time::Instant::now();
 
     println!(
-        "multiprocess_time_{:?}",
+        "multithread_time_{:?}",
         debug_e_time.duration_since(debug_s_time)
     );
 
