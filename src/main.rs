@@ -53,7 +53,7 @@ fn m2ultithread() -> Result<(), io::Error> {
 fn multithread() -> Result<(), io::Error> {
     let test_pixels: [u32; 2] = [750, 1334];
     let test_quality: u8 = 90;
-    let test_path = String::from("C:\\temp\\testzip");
+    let test_path = String::from("C:\\temp\\test.zip");
     let test_outpath = String::from("C:\\temp\\conv_m.zip");
     let debug_s_time = std::time::Instant::now();
 
