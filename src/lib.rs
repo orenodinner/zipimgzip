@@ -448,7 +448,6 @@ impl MemoryImages {
         let mut conv_images: Vec<DynamicImage> = Vec::new();
         let mut conv_outpath = vec![];
         let print;
-       
 
         match self.print_mode {
             PrintMode::Print => {
@@ -477,37 +476,37 @@ impl MemoryImages {
             }
         }
 
-        thread::scope(|s|{
+        thread::scope(|s| {
             let mut handles = vec![];
 
-        for im in &self.input_memory_images {
-            let out_path = &self.out_names[im_i];
-            let print_mode = &self.print_mode;
+            for im in &self.input_memory_images {
+                let out_path = &self.out_names[im_i];
+                let print_mode = &self.print_mode;
 
-            let handle = s.spawn(move || {
-                do_convert_image_multithread(
-                    im, as_width, as_height, out_path, conv_num, print_mode,
-                )
-            });
-            handles.push(handle);
-            im_i += 1;
-        }
+                let handle = s.spawn(move || {
+                    do_convert_image_multithread(
+                        im, as_width, as_height, out_path, conv_num, print_mode,
+                    )
+                });
+                handles.push(handle);
+                im_i += 1;
+            }
 
-        for h in handles {
-            let (im_conv, _outpath) = h.join().unwrap();
-            conv_images.push(im_conv);
-            conv_outpath.push(_outpath);
-        }
-  
-        if print {
-            println!("")
-        }
-    });
+            for h in handles {
+                let (im_conv, _outpath) = h.join().unwrap();
+                conv_images.push(im_conv);
+                conv_outpath.push(_outpath);
+            }
+
+            if print {
+                println!("")
+            }
+        });
         return Ok(MemoryImages {
             input_memory_images: conv_images,
             out_names: conv_outpath,
             print_mode: self.print_mode.clone(),
-        }); 
+        });
     }
 
     ///MultiThread
@@ -544,24 +543,23 @@ impl MemoryImages {
             quality = 100
         };
 
-        thread::scope(|s|{
-        let mut bit_handles = vec![];
+        thread::scope(|s| {
+            let mut bit_handles = vec![];
 
-        for im in &self.input_memory_images {
-           
-            let out_names = &self.out_names;
-            let bit_handle = s.spawn(move || {
-                do_create_imgtobit_multithread(_i, im, out_names, SaveFormat::Jpeg, quality)
-            });
-            bit_handles.push(bit_handle);
-            _i += 1;
-        }
-        for h in bit_handles {
-            let (h_im, h_outpath) = h.join().unwrap();
-            vec_w.push(h_im);
-            vec_startname.push(h_outpath);
-        }
-    });
+            for im in &self.input_memory_images {
+                let out_names = &self.out_names;
+                let bit_handle = s.spawn(move || {
+                    do_create_imgtobit_multithread(_i, im, out_names, SaveFormat::Jpeg, quality)
+                });
+                bit_handles.push(bit_handle);
+                _i += 1;
+            }
+            for h in bit_handles {
+                let (h_im, h_outpath) = h.join().unwrap();
+                vec_w.push(h_im);
+                vec_startname.push(h_outpath);
+            }
+        });
         let mut i = 0;
         for r in vec_w {
             let _ = zip.start_file(vec_startname[i].clone(), options);
