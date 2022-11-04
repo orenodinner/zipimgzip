@@ -6,8 +6,8 @@ use zipimgzip::PrintMode;
 use zipimgzip::SaveFormat;
 
 fn main() -> Result<(), io::Error> {
-    singlethread()?;
-    multithread()?;
+ //   singlethread()?;
+ //   multithread()?;
     m2ultithread()?;
 
     return Ok(());

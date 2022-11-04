@@ -66,6 +66,7 @@ pub enum ConvMode {
     Both,
 }
 
+#[derive(Clone)]
 pub enum SaveFormat {
     Jpeg,
     Png,
@@ -548,8 +549,9 @@ impl MemoryImages {
 
             for im in &self.input_memory_images {
                 let out_names = &self.out_names;
+                let save_format =&_save_format;
                 let bit_handle = s.spawn(move || {
-                    do_create_imgtobit_multithread(_i, im, out_names, SaveFormat::Jpeg, quality)
+                    do_create_imgtobit_multithread(_i, im, out_names, save_format, quality)
                 });
                 bit_handles.push(bit_handle);
                 _i += 1;
@@ -636,7 +638,7 @@ fn do_create_imgtobit_multithread(
     i: usize,
     im: &DynamicImage,
     out_names: &Vec<PathBuf>,
-    _save_format: SaveFormat,
+    _save_format: &SaveFormat,
     quality: u8,
 ) -> (Vec<u8>, String) {
     let res_start_name;
