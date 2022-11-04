@@ -6,13 +6,12 @@ use zipimgzip::PrintMode;
 use zipimgzip::SaveFormat;
 
 fn main() -> Result<(), io::Error> {
-    singlethread()?;
-    multithread()?;
+ //   singlethread()?;
+ //   multithread()?;
     m2ultithread()?;
-    
+
     return Ok(());
 }
-
 
 fn singlethread() -> Result<(), io::Error> {
     let test_pixels: [u32; 2] = [750, 1334];

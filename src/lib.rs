@@ -66,6 +66,7 @@ pub enum ConvMode {
     Both,
 }
 
+#[derive(Clone)]
 pub enum SaveFormat {
     Jpeg,
     Png,
@@ -448,7 +449,6 @@ impl MemoryImages {
         let mut conv_images: Vec<DynamicImage> = Vec::new();
         let mut conv_outpath = vec![];
         let print;
-        let mut handles = vec![];
 
         match self.print_mode {
             PrintMode::Print => {
@@ -477,29 +477,32 @@ impl MemoryImages {
             }
         }
 
-        for im_o in &self.input_memory_images {
-            let im = im_o.clone();
-            let out_path = self.out_names[im_i].clone();
-            let print_mode = self.print_mode.clone();
+        thread::scope(|s| {
+            let mut handles = vec![];
 
-            let handle = thread::spawn(move || {
-                do_convert_image_multithread(
-                    im, as_width, as_height, out_path, conv_num, print_mode,
-                )
-            });
-            handles.push(handle);
-            im_i += 1;
-        }
+            for im in &self.input_memory_images {
+                let out_path = &self.out_names[im_i];
+                let print_mode = &self.print_mode;
 
-        for h in handles {
-            let (im_conv, _outpath) = h.join().unwrap();
-            conv_images.push(im_conv);
-            conv_outpath.push(_outpath);
-        }
+                let handle = s.spawn(move || {
+                    do_convert_image_multithread(
+                        im, as_width, as_height, out_path, conv_num, print_mode,
+                    )
+                });
+                handles.push(handle);
+                im_i += 1;
+            }
 
-        if print {
-            println!("")
-        }
+            for h in handles {
+                let (im_conv, _outpath) = h.join().unwrap();
+                conv_images.push(im_conv);
+                conv_outpath.push(_outpath);
+            }
+
+            if print {
+                println!("")
+            }
+        });
         return Ok(MemoryImages {
             input_memory_images: conv_images,
             out_names: conv_outpath,
@@ -540,23 +543,25 @@ impl MemoryImages {
         if quality > 100 {
             quality = 100
         };
-        let mut bit_handles = vec![];
 
-        for im_o in &self.input_memory_images {
-            let im = im_o.clone();
-            let out_names = self.out_names.clone();
-            let bit_handle = thread::spawn(move || {
-                do_create_imgtobit_multithread(_i, im, out_names, SaveFormat::Jpeg, quality.clone())
-            });
-            bit_handles.push(bit_handle);
-            _i += 1;
-        }
-        for h in bit_handles {
-            let (h_im, h_outpath) = h.join().unwrap();
-            vec_w.push(h_im);
-            vec_startname.push(h_outpath);
-        }
+        thread::scope(|s| {
+            let mut bit_handles = vec![];
 
+            for im in &self.input_memory_images {
+                let out_names = &self.out_names;
+                let save_format =&_save_format;
+                let bit_handle = s.spawn(move || {
+                    do_create_imgtobit_multithread(_i, im, out_names, save_format, quality)
+                });
+                bit_handles.push(bit_handle);
+                _i += 1;
+            }
+            for h in bit_handles {
+                let (h_im, h_outpath) = h.join().unwrap();
+                vec_w.push(h_im);
+                vec_startname.push(h_outpath);
+            }
+        });
         let mut i = 0;
         for r in vec_w {
             let _ = zip.start_file(vec_startname[i].clone(), options);
@@ -578,12 +583,12 @@ fn shift_jis_encode(input: &[u8]) -> String {
 }
 
 fn do_convert_image_multithread(
-    im: DynamicImage,
+    im: &DynamicImage,
     as_width: u32,
     as_height: u32,
-    out_path: PathBuf,
+    out_path: &PathBuf,
     conv_num: i32,
-    print_mode: PrintMode,
+    print_mode: &PrintMode,
 ) -> (DynamicImage, PathBuf) {
     let mut conv_width = as_width.clone();
     let mut conv_height = as_height.clone();
@@ -626,14 +631,14 @@ fn do_convert_image_multithread(
         print!("\rimage conv{:?}", out_path);
     }
 
-    return (conv_im, out_path);
+    return (conv_im, out_path.to_path_buf());
 }
 
 fn do_create_imgtobit_multithread(
     i: usize,
-    im: DynamicImage,
-    out_names: Vec<PathBuf>,
-    _save_format: SaveFormat,
+    im: &DynamicImage,
+    out_names: &Vec<PathBuf>,
+    _save_format: &SaveFormat,
     quality: u8,
 ) -> (Vec<u8>, String) {
     let res_start_name;
