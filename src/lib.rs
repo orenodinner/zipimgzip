@@ -125,7 +125,6 @@ pub fn unzip_to_memory(
             if print {
                 print!("\rFile {}/{} ext \"{}\"", i, archive_len, outpath.display());
             }
-            fs::create_dir_all(&outpath)?;
 
             let to_str: &str;
             match &outpath.to_str() {
@@ -150,11 +149,6 @@ pub fn unzip_to_memory(
                 stdout().flush()?;
             }
 
-            if let Some(p) = outpath.parent() {
-                if !p.exists() {
-                    fs::create_dir_all(&p)?;
-                }
-            }
 
             let mut bf_out: Vec<u8> = Vec::new();
             let _ = file.read_to_end(&mut bf_out);
