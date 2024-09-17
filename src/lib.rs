@@ -313,8 +313,6 @@ impl MemoryImages {
             }
         }
 
-        let options =
-            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
         let mut _i = 0;
         let mut count_i = 0;
@@ -333,6 +331,8 @@ impl MemoryImages {
                     return Err(io::Error::new(io::ErrorKind::Other, "to_str()_Error"));
                 }
             }
+            let options:zip::write:: FileOptions<zip::write::ExtendedFileOptions> =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
             let _ = zip.start_file(start_name, options);
 
@@ -529,7 +529,7 @@ impl MemoryImages {
             }
         }
 
-        let options =
+        let options:zip::write:: FileOptions<zip::write::ExtendedFileOptions> =
             zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
         let mut _i = 0;
@@ -558,6 +558,8 @@ impl MemoryImages {
         });
         let mut i = 0;
         for r in vec_w {
+            let options:zip::write:: FileOptions<zip::write::ExtendedFileOptions> =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
             let _ = zip.start_file(vec_startname[i].clone(), options);
             let _ = zip.write_all(&*r);
             i += 1;
@@ -652,14 +654,14 @@ fn do_create_imgtobit_multithread(
     match _save_format {
         SaveFormat::Jpeg => {
             let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
-                .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
         }
         SaveFormat::Png => {
             let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
                 im.as_bytes(),
                 im.width(),
                 im.height(),
-                im.color(),
+                im.color().into(),
             );
         }
 
@@ -668,24 +670,24 @@ fn do_create_imgtobit_multithread(
             Some(r) => match r {
                 r if r == _os_str_jpg => {
                     let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
-                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                        .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
                 }
                 r if r == _os_str_jpeg => {
                     let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
-                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                        .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
                 }
                 r if r == _os_str_png => {
                     let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
                         im.as_bytes(),
                         im.width(),
                         im.height(),
-                        im.color(),
+                        im.color().into(),
                     );
                 }
 
                 _ => {
                     let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
-                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                        .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
                 }
             },
         },
