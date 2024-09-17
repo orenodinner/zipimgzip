@@ -70,6 +70,7 @@ pub enum ConvMode {
 pub enum SaveFormat {
     Jpeg,
     Png,
+    Avif,
     Ref,
 }
 
@@ -334,7 +335,11 @@ impl MemoryImages {
             let options:zip::write:: FileOptions<zip::write::ExtendedFileOptions> =
             zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
-            let _ = zip.start_file(start_name, options);
+            let mut new_outpath = self.out_names[count_i].clone();
+
+
+
+            //let _ = zip.start_file(start_name, options);
 
             let mut w = vec![];
             let _os_str_jpg = OsStr::new("jpg");
@@ -354,6 +359,17 @@ impl MemoryImages {
                         im.color().into(),
                     );
                 }
+
+                SaveFormat::Avif => {
+                    let _ = image::codecs::avif::AvifEncoder::new(&mut w).write_image(
+                        im.as_bytes(),
+                        im.width(),
+                        im.height(),
+                        im.color().into(),
+                    );
+                }
+
+
 
                 SaveFormat::Ref => match self.out_names[count_i].extension() {
                     None => {}
@@ -388,6 +404,8 @@ impl MemoryImages {
                         }
 
                         _ => {
+                            new_outpath.set_extension("jpg");
+                            self.out_names[count_i] = new_outpath.clone();
                             let _ =
                                 image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                                     .write_image(
@@ -400,6 +418,10 @@ impl MemoryImages {
                     },
                 },
             }
+            let new_start_name = new_outpath.to_str().unwrap();
+            let _ = zip.start_file(new_start_name, options);
+
+
 
             let _ = zip.write_all(&*w);
 
@@ -529,8 +551,6 @@ impl MemoryImages {
             }
         }
 
-        let options:zip::write:: FileOptions<zip::write::ExtendedFileOptions> =
-            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
 
         let mut _i = 0;
 
@@ -650,6 +670,10 @@ fn do_create_imgtobit_multithread(
     let _os_str_jpg = OsStr::new("jpg");
     let _os_str_jpeg = OsStr::new("jpeg");
     let _os_str_png = OsStr::new("png");
+    let _os_str_avif = OsStr::new("avif");
+
+        // 修正点：ファイル名を変更するため、可変参照を取得
+        let mut new_outpath = out_names[i].clone();
 
     match _save_format {
         SaveFormat::Jpeg => {
@@ -658,6 +682,15 @@ fn do_create_imgtobit_multithread(
         }
         SaveFormat::Png => {
             let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
+                im.as_bytes(),
+                im.width(),
+                im.height(),
+                im.color().into(),
+            );
+        }
+
+        SaveFormat::Avif => {
+            let _ = image::codecs::avif::AvifEncoder::new(&mut w).write_image(
                 im.as_bytes(),
                 im.width(),
                 im.height(),
@@ -685,13 +718,25 @@ fn do_create_imgtobit_multithread(
                     );
                 }
 
+                r if r == _os_str_avif => {
+                    let _ = image::codecs::avif::AvifEncoder::new(&mut w).write_image(
+                        im.as_bytes(),
+                        im.width(),
+                        im.height(),
+                        im.color().into(),
+                    );
+                }
+
                 _ => {
+                    new_outpath.set_extension("jpg");
+
                     let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                         .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
                 }
             },
         },
     }
+    let res_start_name = new_outpath.to_str().unwrap_or("").to_string();
     let r = (&*w).to_vec();
     let p = res_start_name.to_string();
     return (r, p);
