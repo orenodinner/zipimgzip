@@ -36,7 +36,8 @@ return Ok(())
 ```
 
 ## Support
-Jpeg/Jpg/Png
+Jpeg/Jpg/Png/Avif
+bmp/jif/tiff/webp ->convert jpg
 
 
 
