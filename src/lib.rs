@@ -344,14 +344,14 @@ impl MemoryImages {
             match _save_format {
                 SaveFormat::Jpeg => {
                     let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
-                        .write_image(im.as_bytes(), im.width(), im.height(), im.color());
+                        .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
                 }
                 SaveFormat::Png => {
                     let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
                         im.as_bytes(),
                         im.width(),
                         im.height(),
-                        im.color(),
+                        im.color().into(),
                     );
                 }
 
@@ -365,7 +365,7 @@ impl MemoryImages {
                                         im.as_bytes(),
                                         im.width(),
                                         im.height(),
-                                        im.color(),
+                                        im.color().into(),
                                     );
                         }
                         r if r == _os_str_jpeg => {
@@ -375,7 +375,7 @@ impl MemoryImages {
                                         im.as_bytes(),
                                         im.width(),
                                         im.height(),
-                                        im.color(),
+                                        im.color().into(),
                                     );
                         }
                         r if r == _os_str_png => {
@@ -383,7 +383,7 @@ impl MemoryImages {
                                 im.as_bytes(),
                                 im.width(),
                                 im.height(),
-                                im.color(),
+                                im.color().into(),
                             );
                         }
 
@@ -394,7 +394,7 @@ impl MemoryImages {
                                         im.as_bytes(),
                                         im.width(),
                                         im.height(),
-                                        im.color(),
+                                        im.color().into(),
                                     );
                         }
                     },
