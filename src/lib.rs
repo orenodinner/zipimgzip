@@ -681,7 +681,7 @@ fn do_create_imgtobit_multithread(
                 .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
         }
         SaveFormat::Png => {
-            let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
+            let _ = image::codecs::png::PngEncoder::new_with_quality(&mut w,image::codecs::png::CompressionType::Best,image::codecs::png::FilterType::Paeth).write_image(
                 im.as_bytes(),
                 im.width(),
                 im.height(),
@@ -704,10 +704,12 @@ fn do_create_imgtobit_multithread(
                 r if r == _os_str_jpg => {
                     let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                         .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
+                    new_outpath.set_extension("jpg");
                 }
                 r if r == _os_str_jpeg => {
                     let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                         .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
+                    new_outpath.set_extension("jpeg");
                 }
                 r if r == _os_str_png => {
                     let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
@@ -716,6 +718,7 @@ fn do_create_imgtobit_multithread(
                         im.height(),
                         im.color().into(),
                     );
+                    new_outpath.set_extension("png");
                 }
 
                 r if r == _os_str_avif => {
@@ -725,6 +728,7 @@ fn do_create_imgtobit_multithread(
                         im.height(),
                         im.color().into(),
                     );
+                    new_outpath.set_extension("avif");
                 }
 
                 _ => {
