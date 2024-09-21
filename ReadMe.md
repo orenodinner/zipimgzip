@@ -37,7 +37,7 @@ return Ok(())
 
 ## Support
 Jpeg/Jpg/Png/Avif
-bmp/jif/tiff/webp ->convert jpg
+bmp/gif/tiff/webp ->convert jpg
 
 
 
