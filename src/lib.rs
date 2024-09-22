@@ -51,6 +51,10 @@ use image::imageops::FilterType;
 use image::DynamicImage;
 use image::ImageEncoder;
 
+
+use oxipng;
+
+
 use std::thread;
 
 #[derive(Clone)]
@@ -70,6 +74,7 @@ pub enum ConvMode {
 pub enum SaveFormat {
     Jpeg,
     Png,
+    ComicPng,
     Avif,
     Ref,
 }
@@ -367,8 +372,34 @@ impl MemoryImages {
 
                 }
 
+                SaveFormat::ComicPng => {
+                    let c_im = conv_gray_quantize(im, &self.print_mode);
+                    let _ = image::codecs::png::PngEncoder::new_with_quality(&mut w,image::codecs::png::CompressionType::Best,image::codecs::png::FilterType::Adaptive).write_image(
+                        c_im.as_bytes(),
+                        c_im.width(),
+                        c_im.height(),
+                        c_im.color().into(),
+                    );
+                    new_outpath.set_extension("png");
+                    self.out_names[count_i] = new_outpath.clone();
+
+                        // oxipngで最適化
+                    let options = oxipng::Options::from_preset(6); // 圧縮レベルを指定
+                    match oxipng::optimize_from_memory(&w, &options) {
+                        Ok(optimized_data) => {
+                            w = optimized_data;
+                        }
+                        Err(e) => {
+                            return Err(io::Error::new(
+                                io::ErrorKind::Other,
+                                format!("Failed to optimize PNG: {}", e),
+                            ));
+                        }}
+
+                }
+
                 SaveFormat::Avif => {
-                    let _ = image::codecs::avif::AvifEncoder::new(&mut w).write_image(
+                    let _ = image::codecs::avif::AvifEncoder::new_with_speed_quality(&mut w,3,70).write_image(
                         im.as_bytes(),
                         im.width(),
                         im.height(),
@@ -555,8 +586,6 @@ impl MemoryImages {
         let path_temp = Path::new(&outpath);
         let file = File::create(&path_temp)?;
         let mut zip = zip::ZipWriter::new(file);
-        let mut vec_w = vec![];
-        let mut vec_startname = vec![];
 
         let print;
         match self.print_mode {
@@ -574,6 +603,10 @@ impl MemoryImages {
         if quality > 100 {
             quality = 100
         };
+            // スレッドの処理結果を保持するベクタを初期化
+    let num_images = self.input_memory_images.len();
+    let mut vec_w = vec![None; num_images];
+    let mut vec_startname = vec![None; num_images];
 
         thread::scope(|s| {
             let mut bit_handles = vec![];
@@ -588,23 +621,36 @@ impl MemoryImages {
                 _i += 1;
             }
             for h in bit_handles {
-                let (h_im, h_outpath) = h.join().unwrap();
-                vec_w.push(h_im);
-                vec_startname.push(h_outpath);
+                let (index,h_im, h_outpath) = h.join().unwrap();
+                vec_w[index] = Some(h_im);
+                vec_startname[index] = Some(h_outpath);
             }
         });
-        let mut i = 0;
-        for r in vec_w {
-            let options:zip::write:: FileOptions<zip::write::ExtendedFileOptions> =
-            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Stored);
-            let _ = zip.start_file(vec_startname[i].clone(), options);
-            let _ = zip.write_all(&*r);
-            i += 1;
+            // self.out_namesを更新
+      for i in 0..num_images {
+        if let Some(ref start_name) = vec_startname[i] {
+            self.out_names[i] = PathBuf::from(start_name);
         }
-        let zip_file = zip.finish()?;
-        if print {
-            println!("\nFINSH")
-        };
+    }
+
+
+
+
+    // ZIPファイルに書き込む
+    for i in 0..num_images {
+        if let (Some(ref data), Some(ref start_name)) = (&vec_w[i], &vec_startname[i]) {
+            let options: zip::write::FileOptions<zip::write::ExtendedFileOptions> =
+                zip::write::FileOptions::default()
+                    .compression_method(zip::CompressionMethod::Stored);
+            let _ = zip.start_file(start_name.clone(), options);
+            let _ = zip.write_all(&data);
+        }
+    }
+
+    let zip_file = zip.finish()?;
+    if print {
+        println!("\nFINSH")
+    };
         return Ok(zip_file);
     }
 }
@@ -673,7 +719,7 @@ fn do_create_imgtobit_multithread(
     out_names: &Vec<PathBuf>,
     _save_format: &SaveFormat,
     quality: u8,
-) -> (Vec<u8>, String) {
+) -> (usize,Vec<u8>, String) {
     let res_start_name;
     let mut w = vec![];
     match out_names[i].to_str() {
@@ -696,6 +742,7 @@ fn do_create_imgtobit_multithread(
         SaveFormat::Jpeg => {
             let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                 .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
+            new_outpath.set_extension("jpg");
         }
         SaveFormat::Png => {
             let _ = image::codecs::png::PngEncoder::new_with_quality(&mut w,image::codecs::png::CompressionType::Best,image::codecs::png::FilterType::Paeth).write_image(
@@ -704,15 +751,47 @@ fn do_create_imgtobit_multithread(
                 im.height(),
                 im.color().into(),
             );
+            new_outpath.set_extension("png");
+        }
+        SaveFormat::ComicPng => {
+            let c_im = conv_gray_quantize(im, &PrintMode::Unprint);
+            let _ = image::codecs::png::PngEncoder::new_with_quality(&mut w,image::codecs::png::CompressionType::Best,image::codecs::png::FilterType::Adaptive).write_image(
+                c_im.as_bytes(),
+                c_im.width(),
+                c_im.height(),
+                c_im.color().into(),
+            );
+            new_outpath.set_extension("png");
+
+            // oxipngで最適化
+            let mut options = oxipng::Options::from_preset(6); // 圧縮レベルを指定
+            options.scale_16 = true;
+            options.optimize_alpha = true;
+            options.deflate = oxipng::Deflaters::Libdeflater {
+                compression: 12
+            };
+
+
+            match oxipng::optimize_from_memory(&w, &options) {
+                Ok(optimized_data) => {
+                    w = optimized_data;
+                }
+                Err(e) => {
+                    panic!("Failed to optimize PNG: {}", e);
+                }
+            }
+
+
         }
 
         SaveFormat::Avif => {
-            let _ = image::codecs::avif::AvifEncoder::new(&mut w).write_image(
+            let _ = image::codecs::avif::AvifEncoder::new_with_speed_quality(&mut w,3,70).write_image(
                 im.as_bytes(),
                 im.width(),
                 im.height(),
                 im.color().into(),
             );
+            new_outpath.set_extension("avif");
         }
 
         SaveFormat::Ref => match out_names[i].extension() {
@@ -760,5 +839,30 @@ fn do_create_imgtobit_multithread(
     let res_start_name = new_outpath.to_str().unwrap_or("").to_string();
     let r = (&*w).to_vec();
     let p = res_start_name.to_string();
-    return (r, p);
+    return (i,r, p);
+}
+
+
+fn conv_gray_quantize(im: &DynamicImage, print_mode: &PrintMode) -> (DynamicImage) {
+    let print;
+    match print_mode {
+        PrintMode::Print => {
+            print = true;
+        }
+        PrintMode::Unprint => {
+            print = false;
+        }
+    }
+
+    // グレースケールに変換
+    let gray_image = im.to_luma8();
+    
+
+
+    if print {
+        print!("\rimage conv{:?}", "gray");
+    }
+    //quantized_imageをDynamicImageに変換して返す
+    return DynamicImage::ImageLuma8(gray_image);
+
 }
