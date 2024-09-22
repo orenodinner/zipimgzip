@@ -352,7 +352,7 @@ impl MemoryImages {
                         .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
                 }
                 SaveFormat::Png => {
-                    let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
+                    let _ = image::codecs::png::PngEncoder::new_with_quality(&mut w,image::codecs::png::CompressionType::Best,image::codecs::png::FilterType::Paeth).write_image(
                         im.as_bytes(),
                         im.width(),
                         im.height(),
@@ -395,7 +395,7 @@ impl MemoryImages {
                                     );
                         }
                         r if r == _os_str_png => {
-                            let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
+                            let _ = image::codecs::png::PngEncoder::new_with_quality(&mut w,image::codecs::png::CompressionType::Best,image::codecs::png::FilterType::Paeth).write_image(
                                 im.as_bytes(),
                                 im.width(),
                                 im.height(),
@@ -712,7 +712,7 @@ fn do_create_imgtobit_multithread(
                     new_outpath.set_extension("jpeg");
                 }
                 r if r == _os_str_png => {
-                    let _ = image::codecs::png::PngEncoder::new(&mut w).write_image(
+                    let _ = image::codecs::png::PngEncoder::new_with_quality(&mut w,image::codecs::png::CompressionType::Best,image::codecs::png::FilterType::Paeth).write_image(
                         im.as_bytes(),
                         im.width(),
                         im.height(),
