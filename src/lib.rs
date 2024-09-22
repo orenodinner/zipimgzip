@@ -346,10 +346,14 @@ impl MemoryImages {
             let _os_str_jpeg = OsStr::new("jpeg");
             let _os_str_png = OsStr::new("png");
 
+            let mut new_outpath = self.out_names[count_i].clone();
+
             match _save_format {
                 SaveFormat::Jpeg => {
                     let _ = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut w, quality)
                         .write_image(im.as_bytes(), im.width(), im.height(), im.color().into());
+                    new_outpath.set_extension("jpg");
+                    self.out_names[count_i] = new_outpath.clone();
                 }
                 SaveFormat::Png => {
                     let _ = image::codecs::png::PngEncoder::new_with_quality(&mut w,image::codecs::png::CompressionType::Best,image::codecs::png::FilterType::Paeth).write_image(
@@ -358,6 +362,9 @@ impl MemoryImages {
                         im.height(),
                         im.color().into(),
                     );
+                    new_outpath.set_extension("png");
+                    self.out_names[count_i] = new_outpath.clone();
+
                 }
 
                 SaveFormat::Avif => {
@@ -367,6 +374,8 @@ impl MemoryImages {
                         im.height(),
                         im.color().into(),
                     );
+                    new_outpath.set_extension("avif");
+                    self.out_names[count_i] = new_outpath.clone();
                 }
 
 
@@ -383,6 +392,8 @@ impl MemoryImages {
                                         im.height(),
                                         im.color().into(),
                                     );
+                            new_outpath.set_extension("jpg");
+                            self.out_names[count_i] = new_outpath.clone();
                         }
                         r if r == _os_str_jpeg => {
                             let _ =
@@ -393,6 +404,9 @@ impl MemoryImages {
                                         im.height(),
                                         im.color().into(),
                                     );
+                            new_outpath.set_extension("jpeg");
+                            self.out_names[count_i] = new_outpath.clone();
+
                         }
                         r if r == _os_str_png => {
                             let _ = image::codecs::png::PngEncoder::new_with_quality(&mut w,image::codecs::png::CompressionType::Best,image::codecs::png::FilterType::Paeth).write_image(
@@ -401,6 +415,8 @@ impl MemoryImages {
                                 im.height(),
                                 im.color().into(),
                             );
+                            new_outpath.set_extension("png");
+                            self.out_names[count_i] = new_outpath.clone();
                         }
 
                         _ => {
@@ -414,6 +430,7 @@ impl MemoryImages {
                                         im.height(),
                                         im.color().into(),
                                     );
+                           
                         }
                     },
                 },
